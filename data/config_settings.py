@@ -75,7 +75,7 @@ else:
             "cool_down_good_seconds": "120"
         },
         "update": {
-            "repo": "HGFantasy/MissionchiefBot-X"
+            "repo": "HGFantasy/MscBot"
         }
     })
 
@@ -184,4 +184,4 @@ def get_backoff_config():
         "cool_down_good_seconds": _getint("backoff","cool_down_good_seconds", 120),
     }
 
-def get_update_repo(): return _get("update","repo","HGFantasy/MissionchiefBot-X")
+def get_update_repo(): return _get("update","repo","HGFantasy/MscBot")

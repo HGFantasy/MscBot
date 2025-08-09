@@ -1,5 +1,5 @@
 
-# Project: MissionchiefBot-X — ETA & destination helpers
+# Project: MscBot — ETA & destination helpers
 # License: MIT
 
 import re, math

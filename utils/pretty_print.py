@@ -1,5 +1,5 @@
 
-# Project: MissionchiefBot-X
+# Project: MscBot
 # Maintained by: HGFantasy
 # License: MIT
 
