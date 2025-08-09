@@ -1,0 +1,45 @@
+# Project: MissionchiefBot-X
+# Maintained by: HGFantasy
+# License: MIT (see LICENSE)
+# Note: Use responsibly and in accordance with the website's Terms of Service.
+
+def get_vehicle_options(vehicle_type):
+ vehicle_options_map = {
+ "arffs or firetruck": ["Type 1 fire engine", "Type 2 fire engine", "Small ARFF Crash Tender", "Medium ARFF Crash Tender", "Large ARFF Crash Tender"],
+ "firetruck": ["Type 1 fire engine", "Type 2 fire engine", "Type 3 fire engine"],
+ "firetrucks or platform truck": ["Type 1 fire engine", "Type 2 fire engine", "Platform truck", "Quint"],
+ "firetrucks or playform truck": ["Type 1 fire engine", "Type 2 fire engine","Platform truck", "Quint"],
+ "firetrucks, heavy rescue vehicles or platform truck": ["Type 1 fire engine", "Type 2 fire engine", "Platform truck", "Quint", "Heavy rescue vehicle", "Rescue Engine"],
+ "platform truck": ["Platform truck", "Quint"],
+ "flood equipment": ["Flood Equipment Trailer"],
+ "battalion chief vehicle": ["Battalion chief unit"],
+ "mobile air": ["Mobile air"],
+ "mobile air unit": ["Mobile air"],
+ "mobile air vehicle": ["Mobile air"],
+ "heavy rescue vehicle": ["Heavy rescue vehicle", "Rescue Engine"],
+ "hazmat vehicle": ["HazMat"],
+ "hazmat": ["HazMat"],
+ "mobile command vehicle": ["MCV"],
+ "fire investigation unit": ["Fire Investigator Unit"],
+ "arff": ["Small ARFF Crash Tender", "Medium ARFF Crash Tender", "Large ARFF Crash Tender"],
+ "ambulance": ["ALS Ambulance", "BLS Ambulance"],
+ "battalion chief unit": ["EMS Chief"],
+ "ems chief": ["EMS Chief"],
+ "ems mobile command": ["EMS Mobile Command Unit"],
+ "ems mobile command unit": ["EMS Mobile Command Unit"],
+ "police car": ["Patrol car"],
+ "patrol car": ["Patrol car"],
+ "police supervisors / sheriff": ["Police Supervisor / Sheriff Unit"],
+ "police helicopter": ["Police helicopter"],
+ "fbi investigation wagon": ["FBI Investigation Wagon"],
+ "fbi bomb technician vehicle": ["FBI Bomb Technician Vehicle"],
+ "fbi drones or fbi investigation wagon": ["FBI Investigation Wagon", "FBI Surveillance Drone"],
+ "riot police unit": ["Riot Police Van", "Riot Police Bus"],
+ "warden truck": ["Warden's Truck"],
+ "police cars or swat suv": ["Patrol car", "SWAT SUV"],
+ "wildland fire engine": ["Type 3 engine", "Type 4 engine", "Type 5 engine", "Type 6 engine", "Type 7 engine"],
+ "wildland fire vehicle": ["Type 3 engine", "Type 4 engine", "Type 5 engine", "Type 6 engine", "Type 7 engine"]
+
+ }
+ vehicle_type = vehicle_type.lower()
+ return vehicle_options_map.get(vehicle_type, [])
