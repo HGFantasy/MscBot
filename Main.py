@@ -45,7 +45,10 @@ def _read_version():
 def _check_update():
     try:
         repo = get_update_repo()
-        req = urllib.request.Request(f"https://api.github.com/repos/{repo}/releases/latest", headers={"User-Agent":"MissionchiefBot-X"})
+        req = urllib.request.Request(
+            f"https://api.github.com/repos/{repo}/releases/latest",
+            headers={"User-Agent": "MscBot"},
+        )
         with urllib.request.urlopen(req, timeout=5) as r:
             data = json.loads(r.read().decode("utf-8"))
             latest = (data.get("tag_name") or "").strip()
@@ -85,7 +88,7 @@ async def mission_logic(browsers_for_missions):
             display_error(f"Error in mission logic: {e}")
 
 async def main():
-    display_info("MissionchiefBot-X starting…")
+    display_info("MscBot starting…")
     _validate_or_die()
     _check_update()
 

@@ -1,4 +1,4 @@
-# Project: MissionchiefBot-X — Transports (escalation + SLA + adaptive pacing + sentinel + reauth)
+# Project: MscBot — Transports (escalation + SLA + adaptive pacing + sentinel + reauth)
 # License: MIT
 
 from __future__ import annotations

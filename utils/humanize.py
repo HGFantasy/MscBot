@@ -1,5 +1,5 @@
 
-# Project: MissionchiefBot-X
+# Project: MscBot
 # License: MIT
 
 import asyncio, random, datetime as dt

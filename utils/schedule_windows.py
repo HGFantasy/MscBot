@@ -1,5 +1,5 @@
 
-# Project: MissionchiefBot-X — Scheduling windows
+# Project: MscBot — Scheduling windows
 # License: MIT
 
 import asyncio, datetime as dt

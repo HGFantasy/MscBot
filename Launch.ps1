@@ -12,7 +12,7 @@ $root = $PSScriptRoot
 if (-not $root) { $root = Split-Path -Parent $MyInvocation.MyCommand.Definition }
 Set-Location $root
 
-Write-Host "== MissionchiefBot-X launcher =="
+Write-Host "== MscBot launcher =="
 
 # --- ensure venv
 $venvPy = ".\.venv\Scripts\python.exe"

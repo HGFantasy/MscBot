@@ -1,4 +1,4 @@
-# Missionchief Bot v1.0
+# MscBot v1.0
 Maintainer: **HGFantasy** — License: **MIT**
 
 ## Quickstart (Windows PowerShell)
