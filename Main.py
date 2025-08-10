@@ -3,14 +3,14 @@
 # Maintained by: HGFantasy
 # License: MIT
 
-import asyncio, os, json, urllib.request
+import asyncio, os, inspect
 from playwright.async_api import async_playwright
 
 from setup.login import login_and_save_state, launch_with_state
 from data.config_settings import (
     get_username, get_password, get_threads, get_headless,
     get_mission_delay, get_transport_delay, get_human,
-    get_eta_filter, get_transport_prefs, get_update_repo
+    get_eta_filter, get_transport_prefs
 )
 from utils.dispatcher import navigate_and_dispatch
 from utils.mission_data import check_and_grab_missions
@@ -22,8 +22,30 @@ from utils.humanize import Humanizer
 from utils.runtime_flags import wait_if_paused, should_stop
 from utils.schedule_windows import wait_if_outside
 from utils.metrics import maybe_write
+from agents.loader import load_agents, iter_active_agents
 
 human = Humanizer(**get_human())
+
+load_agents()
+
+async def _run_agents(event: str, **kwargs) -> None:
+    tasks = []
+    for agent in iter_active_agents():
+        func = getattr(agent, event, None)
+        if not func:
+            continue
+        try:
+            if inspect.iscoroutinefunction(func):
+                tasks.append((agent.__class__.__name__, func(**kwargs)))
+            else:
+                func(**kwargs)
+        except Exception as e:
+            display_error(f"Agent {agent.__class__.__name__}.{event} failed: {e}")
+    if tasks:
+        results = await asyncio.gather(*(c for _, c in tasks), return_exceptions=True)
+        for (name, _), result in zip(tasks, results):
+            if isinstance(result, Exception):
+                display_error(f"Agent {name}.{event} failed: {result}")
 
 def _validate_or_die():
     from data.config_settings import get_eta_filter, get_transport_prefs
@@ -37,35 +59,15 @@ def _validate_or_die():
         raise SystemExit(2)
     display_info("Config validation: OK.")
 
-def _read_version():
-    try:
-        with open("VERSION","r",encoding="utf-8") as f: return f.read().strip()
-    except Exception: return "v0.0"
-
-def _check_update():
-    try:
-        repo = get_update_repo()
-        req = urllib.request.Request(
-            f"https://api.github.com/repos/{repo}/releases/latest",
-            headers={"User-Agent": "MscBot"},
-        )
-        with urllib.request.urlopen(req, timeout=5) as r:
-            data = json.loads(r.read().decode("utf-8"))
-            latest = (data.get("tag_name") or "").strip()
-            local = _read_version()
-            if latest and latest != local:
-                display_info(f"Update available: {local} → {latest} (repo {repo})")
-    except Exception:
-        pass
-
 async def transport_logic(browser):
     display_info("Starting transportation logic.")
     while True:
         try:
+            await _run_agents("on_transport_tick", browser=browser)
             if should_stop(): display_info("STOP requested: exiting transport loop."); break
             await wait_if_paused(); await wait_if_outside(); await human.maybe_break()
             await handle_transport_requests(browser)
-            await human.idle_after_action(); await sleep_jitter(0.6, 0.8)
+            await human.page_dwell(); await human.idle_after_action(); await sleep_jitter(0.6, 0.8)
             await asyncio.sleep(get_transport_delay()); maybe_write()
         except Exception as e:
             display_error(f"Error in transport logic: {e}")
@@ -74,6 +76,7 @@ async def mission_logic(browsers_for_missions):
     display_info("Starting mission logic.")
     while True:
         try:
+            await _run_agents("on_mission_tick", browsers=browsers_for_missions)
             if should_stop(): display_info("STOP requested: exiting mission loop."); break
             await wait_if_paused(); await wait_if_outside(); await human.maybe_break()
             if os.path.exists("data/vehicle_data.json"):
@@ -82,7 +85,7 @@ async def mission_logic(browsers_for_missions):
                 try: await gather_vehicle_data([browsers_for_missions[0]], 1)
                 except Exception as e: display_error(f"Vehicle data gather failed: {e}")
             await navigate_and_dispatch(browsers_for_missions)
-            await human.idle_after_action(); await sleep_jitter(0.6, 0.8)
+            await human.page_dwell(); await human.idle_after_action(); await sleep_jitter(0.6, 0.8)
             await asyncio.sleep(get_mission_delay()); maybe_write()
         except Exception as e:
             display_error(f"Error in mission logic: {e}")
@@ -90,7 +93,7 @@ async def mission_logic(browsers_for_missions):
 async def main():
     display_info("MscBot starting…")
     _validate_or_die()
-    _check_update()
+    await _run_agents("on_start")
 
     username, password = get_username(), get_password()
     headless, threads = get_headless(), max(2, int(get_threads()))
@@ -128,6 +131,7 @@ async def main():
             for i, b in enumerate(browsers, 1):
                 try: display_info(f"Closing browser {i}"); await b.close()
                 except Exception: pass
+            await _run_agents("on_shutdown")
 
 if __name__ == "__main__":
     asyncio.run(main())

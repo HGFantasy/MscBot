@@ -13,7 +13,11 @@ from utils.politeness import goto_safe, ensure_settled, sleep_jitter
 from utils.metrics import inc, maybe_write
 from utils import sentinel
 from data.config_settings import (
-    get_eta_filter, get_defer_config, get_min_mission_age_seconds, get_priority_keywords
+    get_eta_filter,
+    get_defer_config,
+    get_min_mission_age_seconds,
+    get_priority_keywords,
+    get_ambulance_only,
 )
 
 # If your build already exposes these helpers, we’ll still prefer them for basic gating.
@@ -44,6 +48,11 @@ TYPE_KEYWORDS: Dict[str, List[str]] = {
     "arff":     ["arff", "crash tender", "airport fire"],
     "ambulance":["ambulance", "als", "bls", "ems"],
     "police":   ["police", "patrol", "k-9", "k9", "pd"],
+}
+
+_TYPE_PATTERNS = {
+    typ: re.compile("|".join(re.escape(k) for k in kws))
+    for typ, kws in TYPE_KEYWORDS.items()
 }
 
 # Soft cap per type (simultaneous dispatches). Tracked by TTL so it decays naturally.
@@ -98,10 +107,9 @@ def _priority_score(name: str) -> int:
 
 def _classify_type(text: str) -> str | None:
     t = (text or "").lower()
-    for typ, kws in TYPE_KEYWORDS.items():
-        for kw in kws:
-            if kw in t:
-                return typ
+    for typ, pat in _TYPE_PATTERNS.items():
+        if pat.search(t):
+            return typ
     return None
 
 _RE_MIN = re.compile(r'(\d+)\s*min', re.I)
@@ -376,6 +384,7 @@ async def navigate_and_dispatch(browsers):
     min_age = get_min_mission_age_seconds()
     prios   = get_priority_keywords()
     filt    = get_eta_filter()
+    ambulance_only_mode = get_ambulance_only()
     adaptive_step = float(filt.get("adaptive_step", 0.25))
     adaptive_max  = float(filt.get("adaptive_max_mult", 2.0))
     max_minutes_base = int(filt.get("max_minutes", 25))
@@ -425,8 +434,9 @@ async def navigate_and_dispatch(browsers):
     # Option #13: check stuck missions (opt-in)
     await _handle_stuck_cancel(ctx)
 
-    # Option #2: run second-wave top-ups due now
-    await _handle_topups(ctx, max_minutes_base, max_km_base, max_pick)
+    # Option #2: run second-wave top-ups due now (skip if ambulance-only)
+    if not ambulance_only_mode:
+        await _handle_topups(ctx, max_minutes_base, max_km_base, max_pick)
 
     # Iterate missions
     for title, mission_id, data in picked:
@@ -455,18 +465,66 @@ async def navigate_and_dispatch(browsers):
             except Exception:
                 pass
 
+            if ambulance_only_mode:
+                rows = await _fetch_vehicle_rows(page)
+                amb = next(
+                    (
+                        r
+                        for r in rows
+                        if r.get("type") == "ambulance"
+                        and (r.get("eta_min") is None or r["eta_min"] <= max_minutes)
+                        and (r.get("km") is None or r["km"] <= max_km)
+                    ),
+                    None,
+                )
+                if not amb:
+                    delay_min = random.randint(dmin, dmax)
+                    defer[mission_id] = {
+                        "next_check": now + delay_min * 60,
+                        "reason": "no ambulance within limits",
+                        "updated": now,
+                        "defer_count": int(rec.get("defer_count", 0)) + 1,
+                    }
+                    inc("missions_deferred", 1); maybe_write()
+                    display_info(f"Mission {mission_id}: deferred {delay_min} min (no ambulance).")
+                    continue
+                await _check_box_by_id(page, amb["id"])
+                btn = page.locator('button:has-text("Alarm"), button:has-text("Dispatch"), input[type="submit"], a.btn-success').first
+                try:
+                    picked_ids = [amb["id"]]
+                    await btn.wait_for(state="visible", timeout=10000)
+                    await btn.click(); await ensure_settled(page)
+                    inc("missions_dispatched", 1); maybe_write()
+                    display_info(f"Mission {mission_id}: dispatched ambulance-only.")
+                    await _record_cooldowns(picked_ids)
+                    stuck = _load_json(STUCK_PATH)
+                    stuck[mission_id] = {"dispatched_ts": int(time.time())}
+                    _save_json(STUCK_PATH, stuck)
+                    defer.pop(mission_id, None)
+                    attempts.pop(mission_id, None)
+                except Exception as e:
+                    attempts[mission_id] = ntry + 1
+                    display_error(
+                        f"Mission {mission_id}: dispatch button not ready (attempt {attempts[mission_id]}/{ATTEMPT_BUDGET})."
+                    )
+                    sentinel.observe_error(str(e))
+                await ensure_settled(page)
+                continue
+
             # Check eligibility (generic gate)
             eligible = await count_vehicles_within_limits(page, max_minutes, max_km, stop_at=1)
             if eligible < 1:
                 delay_min = random.randint(dmin, dmax)
                 defer[mission_id] = {
-                    "next_check": now + delay_min*60,
+                    "next_check": now + delay_min * 60,
                     "reason": f"no vehicles within limits (x{widen_mult:.2f})",
                     "updated": now,
-                    "defer_count": int(rec.get("defer_count", 0)) + 1
+                    "defer_count": int(rec.get("defer_count", 0)) + 1,
                 }
                 inc("missions_deferred", 1); maybe_write()
-                display_info(f"Mission {mission_id}: deferred {delay_min} min (no eligible; widen x{widen_mult:.2f}).")
+                display_info(
+                    f"Mission {mission_id}: deferred {delay_min} min (no eligible; widen x{widen_mult:.2f})."
+                )
                 continue
 
             # First pass selection (generic)
@@ -474,14 +532,17 @@ async def navigate_and_dispatch(browsers):
 
             # Requirements-aware finishing (Options #1, #17, #18)
             rows = await _fetch_vehicle_rows(page)
-            req  = await _requirements_from_page(page)
+            req = await _requirements_from_page(page)
             have = _count_types(rows, checked_only=True)
 
             added = 0
             for typ, need in req.items():
                 missing = max(0, need - have.get(typ, 0))
-                if missing <= 0: continue
-                added += await _select_more_of_type(page, rows, typ, missing, max_minutes, max_km, max_pick)
+                if missing <= 0:
+                    continue
+                added += await _select_more_of_type(
+                    page, rows, typ, missing, max_minutes, max_km, max_pick
+                )
                 # refresh rows/have
                 rows = await _fetch_vehicle_rows(page)
                 have = _count_types(rows, checked_only=True)
@@ -503,7 +564,9 @@ async def navigate_and_dispatch(browsers):
                 await btn.wait_for(state="visible", timeout=10000)
                 await btn.click(); await ensure_settled(page)
                 inc("missions_dispatched", 1); maybe_write()
-                display_info(f"Mission {mission_id}: dispatched (base {base_selected}, +types {added}, widen x{widen_mult:.2f}).")
+                display_info(
+                    f"Mission {mission_id}: dispatched (base {base_selected}, +types {added}, widen x{widen_mult:.2f})."
+                )
 
                 # Record cooldowns and soft-cap timestamps for types we used
                 await _record_cooldowns(picked_ids)
@@ -513,14 +576,18 @@ async def navigate_and_dispatch(browsers):
                 _save_json(STUCK_PATH, stuck)
 
                 due = _load_json(TOPUP_PATH)
-                due[mission_id] = {"topup_due": int(time.time()) + random.randint(TOPUP_MIN_SEC, TOPUP_MAX_SEC)}
+                due[mission_id] = {
+                    "topup_due": int(time.time()) + random.randint(TOPUP_MIN_SEC, TOPUP_MAX_SEC)
+                }
                 _save_json(TOPUP_PATH, due)
 
                 defer.pop(mission_id, None)
                 attempts.pop(mission_id, None)
             except Exception as e:
                 attempts[mission_id] = ntry + 1
-                display_error(f"Mission {mission_id}: dispatch button not ready (attempt {attempts[mission_id]}/{ATTEMPT_BUDGET}).")
+                display_error(
+                    f"Mission {mission_id}: dispatch button not ready (attempt {attempts[mission_id]}/{ATTEMPT_BUDGET})."
+                )
                 sentinel.observe_error(str(e))
         except Exception as e:
             attempts[mission_id] = ntry + 1

@@ -5,6 +5,7 @@
 
 import configparser, os
 from pathlib import Path
+from functools import lru_cache
 
 THIS_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = THIS_DIR.parent
@@ -74,42 +75,89 @@ else:
             "factor_max": "2.0",
             "cool_down_good_seconds": "120"
         },
+        "dispatch": {
+            "ambulance_only": "false",
+        },
+        "control": {
+            "command_file": "commands.txt",
+        },
         "update": {
             "repo": "HGFantasy/MscBot"
-        }
+        },
+        "agents": {
+            "enabled": "",
+            "disabled": "",
+        },
     })
 
-def _get(s, k, d=""): 
-    try: return config.get(s, k)
-    except Exception: return d
-def _getint(s, k, d): 
-    try: return config.getint(s, k)
-    except Exception: return d
-def _getfloat(s, k, d): 
-    try: return config.getfloat(s, k)
-    except Exception: return d
-def _getbool(s, k, d): 
-    try: return config.getboolean(s, k)
-    except Exception: return d
+def _get(s, k, d=""):
+    try:
+        return config.get(s, k)
+    except Exception:
+        return d
+
+def _getint(s, k, d):
+    try:
+        return config.getint(s, k)
+    except Exception:
+        return d
+
+def _getfloat(s, k, d):
+    try:
+        return config.getfloat(s, k)
+    except Exception:
+        return d
+
+def _getbool(s, k, d):
+    try:
+        return config.getboolean(s, k)
+    except Exception:
+        return d
+
+_CACHED_FUNCS = []
+
+def _cache(fn):
+    cached = lru_cache(maxsize=None)(fn)
+    _CACHED_FUNCS.append(cached)
+    return cached
 
 def get_username(): return os.getenv("MISSIONCHIEF_USER") or _get("credentials","username","")
 def get_password(): return os.getenv("MISSIONCHIEF_PASS") or _get("credentials","password","")
 
-def get_headless(): return _getbool("browser_settings","headless", False)
-def get_threads():  return _getint("browser_settings","browsers", 2)
-def get_slow_mo_ms(): return _getint("browser_settings","slow_mo_ms", 350)
+@_cache
+def get_headless():
+    return _getbool("browser_settings","headless", False)
 
-def get_mission_delay():   return _getint("delays","missions", 10)
-def get_transport_delay(): return _getint("delays","transport", 180)
+@_cache
+def get_threads():
+    return _getint("browser_settings","browsers", 2)
 
+@_cache
+def get_slow_mo_ms():
+    return _getint("browser_settings","slow_mo_ms", 350)
+
+@_cache
+def get_mission_delay():
+    return _getint("delays","missions", 10)
+
+@_cache
+def get_transport_delay():
+    return _getint("delays","transport", 180)
+
+@_cache
 def get_human():
     preset = _get("human","preset","normal").lower().strip()
     scale = {"chill":0.8, "normal":1.0, "sweaty":1.25}.get(preset,1.0)
-    def _rng(s, default): 
-        try: a,b = s.split("-"); return (float(a), float(b))
-        except Exception: return default
-    idle_lo, idle_hi = _rng(_get("human","idle_after_page","0.8-2.2"), (0.8,2.2))
-    dwell_lo, dwell_hi = _rng(_get("human","page_min_dwell","1.8-3.0"), (1.8,3.0))
+
+    def _rng(s, default):
+        try:
+            a, b = s.split("-")
+            return (float(a), float(b))
+        except Exception:
+            return default
+
+    idle_lo, idle_hi = _rng(_get("human","idle_after_page","0.8-2.2"), (0.8, 2.2))
+    dwell_lo, dwell_hi = _rng(_get("human","page_min_dwell","1.8-3.0"), (1.8, 3.0))
     return {
         "preset": preset,
         "short_prob": _getfloat("human","short_break_prob", 0.06),
@@ -119,15 +167,21 @@ def get_human():
         "long_prob": _getfloat("human","long_break_prob", 0.008),
         "long_range": _get("human","long_break_range","900-1800"),
         "quiet_hours": _get("human","quiet_hours","02:00-06:30"),
+        "quiet_mult": _getfloat("human","quiet_break_multiplier", 2.0),
         "idle_after_page": f"{idle_lo*scale:.2f}-{idle_hi*scale:.2f}",
         "page_min_dwell": f"{dwell_lo*scale:.2f}-{dwell_hi*scale:.2f}",
     }
 
+@_cache
 def get_page_min_dwell_range():
     s = _get("human","page_min_dwell","1.8-3.0")
-    try: a,b = s.split("-"); return (float(a), float(b))
-    except Exception: return (1.8,3.0)
+    try:
+        a, b = s.split("-")
+        return (float(a), float(b))
+    except Exception:
+        return (1.8, 3.0)
 
+@_cache
 def get_eta_filter():
     return {
         "enable": _getbool("dispatch_filter","enable_eta_filter", True),
@@ -137,6 +191,8 @@ def get_eta_filter():
         "adaptive_step": _getfloat("dispatch_filter","adaptive_step", 0.25),
         "adaptive_max_mult": _getfloat("dispatch_filter","adaptive_max_mult", 2.0),
     }
+
+@_cache
 def get_defer_config():
     return {
         "enable": _getbool("dispatch_filter","enable_defer", True),
@@ -144,22 +200,33 @@ def get_defer_config():
         "max_minutes": _getint("dispatch_filter","defer_recheck_max", 10),
     }
 
-def get_min_mission_age_seconds(): return _getint("mission_age","min_age_seconds", 60)
+@_cache
+def get_min_mission_age_seconds():
+    return _getint("mission_age","min_age_seconds", 60)
+
+@_cache
 def get_priority_keywords():
     raw = _get("priority","keywords","")
     return [x.strip().lower() for x in raw.split(",") if x.strip()]
 
-def _dow_key(i): return ["mon","tue","wed","thu","fri","sat","sun"][i]
+def _dow_key(i):
+    return ["mon","tue","wed","thu","fri","sat","sun"][i]
+
+@_cache
 def get_windows_by_day():
-    return { _dow_key(i): _get("scheduling", _dow_key(i), "") for i in range(7) }
+    return {_dow_key(i): _get("scheduling", _dow_key(i), "") for i in range(7)}
+
+@_cache
 def get_blackout_dates():
     raw = _get("scheduling","blackout_dates","")
     return {d.strip() for d in raw.split(",") if d.strip()}
 
 # Backward-compat single active_windows for all days
+@_cache
 def get_global_active_windows():
     return _get("scheduling", "active_windows", "")
 
+@_cache
 def get_transport_prefs():
     return {
         "max_hospital_km": _getfloat("transport_prefs","max_hospital_km", 25.0),
@@ -175,6 +242,7 @@ def get_transport_prefs():
         "blacklist_ttl_min": _getint("transport_prefs","blacklist_ttl_min", 45),
     }
 
+@_cache
 def get_backoff_config():
     return {
         "enable": _getbool("backoff","enable", True),
@@ -184,4 +252,28 @@ def get_backoff_config():
         "cool_down_good_seconds": _getint("backoff","cool_down_good_seconds", 120),
     }
 
-def get_update_repo(): return _get("update","repo","HGFantasy/MscBot")
+@_cache
+def get_update_repo():
+    return _get("update","repo","HGFantasy/MscBot")
+
+@_cache
+def get_ambulance_only():
+    return _getbool("dispatch","ambulance_only", False)
+
+def get_command_file():
+    return _get("control","command_file","commands.txt")
+
+def get_enabled_agents():
+    raw = _get("agents", "enabled", "")
+    return [x.strip() for x in raw.split(",") if x.strip()]
+
+def get_disabled_agents():
+    raw = _get("agents", "disabled", "")
+    return [x.strip() for x in raw.split(",") if x.strip()]
+
+def reload_config() -> None:
+    """Reload configuration from disk for hot-reload agents."""
+    if CONFIG_PATH.exists():
+        config.read(CONFIG_PATH, encoding="utf-8")
+        for f in _CACHED_FUNCS:
+            f.cache_clear()
