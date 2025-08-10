@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Reworked update check to track main repository commits and auto-update on startup.
+
 ## 2025-08-10 — v2.0
 
 - Switched to an agent-based architecture with a central event bus for runtime coordination.
