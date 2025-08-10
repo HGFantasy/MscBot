@@ -24,6 +24,7 @@ from utils.mission_data import check_and_grab_missions
 from utils.pretty_print import display_info, display_error
 from utils.transport import handle_transport_requests
 from utils.vehicle_data import gather_vehicle_data
+from utils.building_data import gather_building_data
 from utils.politeness import set_max_concurrency
 from utils.runtime_flags import wait_if_paused, should_stop
 from utils.metrics import maybe_write
@@ -86,15 +87,19 @@ async def mission_logic(browsers_for_missions):
                 break
             await wait_if_paused()
             vehicle_data = Path("data/vehicle_data.json")
-            if vehicle_data.exists():
+            building_data = Path("data/building_data.json")
+            if vehicle_data.exists() and building_data.exists():
                 await check_and_grab_missions(
                     browsers_for_missions, len(browsers_for_missions)
                 )
             else:
                 try:
-                    await gather_vehicle_data([browsers_for_missions[0]], 1)
+                    if not vehicle_data.exists():
+                        await gather_vehicle_data([browsers_for_missions[0]], 1)
+                    if not building_data.exists():
+                        await gather_building_data([browsers_for_missions[0]], 1)
                 except Exception as e:
-                    display_error(f"Vehicle data gather failed: {e}")
+                    display_error(f"Vehicle/building data gather failed: {e}")
             await navigate_and_dispatch(browsers_for_missions)
             await emit("after_mission_tick", browsers=browsers_for_missions)
             await asyncio.sleep(get_mission_delay())
