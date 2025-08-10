@@ -1,4 +1,5 @@
 """Agent that checks the GitHub repo for newer commits."""
+
 from __future__ import annotations
 
 import json
@@ -8,7 +9,7 @@ import sys
 import time
 import urllib.request
 
-from data.config_settings import get_update_repo
+from data.config_settings import PROJECT_ROOT, get_update_repo
 from utils.pretty_print import display_error, display_info
 
 from .base import BaseAgent
@@ -36,7 +37,9 @@ class UpdateCheckAgent(BaseAgent):
 
     async def _check_now(self, auto_update: bool = False) -> None:
         try:
-            repo = get_update_repo()
+            repo = get_update_repo().strip()
+            if not repo:
+                return
             req = urllib.request.Request(
                 f"https://api.github.com/repos/{repo}/commits?per_page=1",
                 headers={"User-Agent": "MscBot"},
@@ -56,24 +59,23 @@ class UpdateCheckAgent(BaseAgent):
 
     def _local_commit(self) -> str:
         try:
-            return (
-                subprocess.run(
-                    ["git", "rev-parse", "HEAD"],
-                    check=True,
-                    text=True,
-                    capture_output=True,
-                ).stdout.strip()
-            )
+            return subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                check=True,
+                text=True,
+                capture_output=True,
+                cwd=PROJECT_ROOT,
+            ).stdout.strip()
         except Exception:
             return ""
 
     def _auto_update(self, repo: str) -> None:
         try:
-            subprocess.run([
-                "git",
-                "pull",
-                f"https://github.com/{repo}.git",
-            ], check=True)
+            subprocess.run(
+                ["git", "pull", f"https://github.com/{repo}.git"],
+                check=True,
+                cwd=PROJECT_ROOT,
+            )
             display_info("Repository auto-updated to latest commit. Restarting…")
             python = sys.executable
             os.execl(python, python, *sys.argv)
