@@ -15,6 +15,7 @@ MscBot supports a lightweight agent system. Each `*.py` file inside the
    - `after_transport_tick` – called after transport logic completes each iteration.
    - `on_event` – react to custom events broadcast by other agents.
    - `on_shutdown` – called once when the bot exits.
+   - `enabled` – return `False` to skip loading by default.
 3. Place your class in the module's global scope so the loader can find it.
 4. Restart the bot; the agent is loaded automatically—no registration is
    necessary.
@@ -64,6 +65,9 @@ disabled = logger
 
 If `enabled` is non-empty, only the listed agents are loaded. Any names in
 `disabled` are always skipped.
+
+Agents may also implement an `enabled()` method that returns `False` to opt out
+of loading entirely until conditions change.
 
 ### Runtime control
 
