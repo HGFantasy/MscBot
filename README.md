@@ -18,6 +18,6 @@ $env:PYTHONUNBUFFERED="1"
 .\.venv\Scripts\python.exe -u -X dev Main.py
 ```
 
-See `config.sample.ini` for configuration options. Copy it to `config.ini` and edit.
+Configuration lives in `config.ini`; adjust settings as needed.
 
 For details on writing your own agents, check [agents/README.md](agents/README.md).

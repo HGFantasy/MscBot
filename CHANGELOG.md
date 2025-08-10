@@ -9,8 +9,6 @@
 
 ## 2025-08-09 — v1.0 public release
 - Initial public release for Python 3.13
-
-## 2025-08-09 — Public release
 - Added human-like behavior (random breaks, quiet hours, dwell after actions)
 - Capped missions per cycle to 17–31; transports per cycle to 122–189
 - Reduced window thrash; browsers default to 2
