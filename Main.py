@@ -27,6 +27,7 @@ from utils.vehicle_data import gather_vehicle_data
 from utils.politeness import set_max_concurrency
 from utils.runtime_flags import wait_if_paused, should_stop
 from utils.metrics import maybe_write
+from utils.browser import close_browsers
 from agents import load_agents, emit
 
 load_dotenv()
@@ -57,6 +58,8 @@ def _validate_or_die() -> None:
 
 
 async def transport_logic(browser):
+    """Process transport requests using the first browser."""
+
     display_info("Starting transportation logic.")
     while True:
         try:
@@ -74,6 +77,8 @@ async def transport_logic(browser):
 
 
 async def mission_logic(browsers_for_missions):
+    """Handle mission dispatching using the remaining browsers."""
+
     display_info("Starting mission logic.")
     while True:
         try:
@@ -101,6 +106,8 @@ async def mission_logic(browsers_for_missions):
 
 
 async def main():
+    """Program entrypoint."""
+
     display_info("MscBot starting…")
     _validate_or_die()
     await emit("start")
@@ -151,12 +158,7 @@ async def main():
             await asyncio.gather(mission_task, transport_task)
         finally:
             display_info("Shutting down browsers…")
-            for i, b in enumerate(browsers, 1):
-                try:
-                    display_info(f"Closing browser {i}")
-                    await b.close()
-                except Exception:
-                    pass
+            await close_browsers(browsers)
             await emit("shutdown")
 
 
