@@ -15,6 +15,7 @@ from utils import sentinel
 from agents.loader import get_agent, emit
 from data.config_settings import (
     get_eta_filter,
+    get_defer_config,
     get_min_mission_age_seconds,
     get_priority_keywords,
     get_ambulance_only,
@@ -481,6 +482,15 @@ async def navigate_and_dispatch(browsers):
                     )
                     inc("missions_deferred", 1)
                     maybe_write()
+                    delay_min = random.randint(dmin, dmax)
+                    defer[mission_id] = {
+                        "next_check": now + delay_min * 60,
+                        "reason": "no ambulance within limits",
+                        "updated": now,
+                        "defer_count": int(rec.get("defer_count", 0)) + 1,
+                    }
+                    inc("missions_deferred", 1); maybe_write()
+                    display_info(f"Mission {mission_id}: deferred {delay_min} min (no ambulance).")
                     continue
                 await _check_box_by_id(page, amb["id"])
                 btn = page.locator('button:has-text("Alarm"), button:has-text("Dispatch"), input[type="submit"], a.btn-success').first
@@ -496,6 +506,7 @@ async def navigate_and_dispatch(browsers):
                     _save_json(STUCK_PATH, stuck)
                     if defer_agent:
                         defer_agent.clear(mission_id)
+                    defer.pop(mission_id, None)
                     attempts.pop(mission_id, None)
                 except Exception as e:
                     attempts[mission_id] = ntry + 1
@@ -515,6 +526,17 @@ async def navigate_and_dispatch(browsers):
                     reason=f"no vehicles within limits (x{widen_mult:.2f})",
                 )
                 inc("missions_deferred", 1); maybe_write()
+                delay_min = random.randint(dmin, dmax)
+                defer[mission_id] = {
+                    "next_check": now + delay_min * 60,
+                    "reason": f"no vehicles within limits (x{widen_mult:.2f})",
+                    "updated": now,
+                    "defer_count": int(rec.get("defer_count", 0)) + 1,
+                }
+                inc("missions_deferred", 1); maybe_write()
+                display_info(
+                    f"Mission {mission_id}: deferred {delay_min} min (no eligible; widen x{widen_mult:.2f})."
+                )
                 continue
 
             # First pass selection (generic)

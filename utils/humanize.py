@@ -44,6 +44,9 @@ class Humanizer:
 
     def __init__(self, **cfg):
         self.actions = 0
+    """Simulate human pacing with configurable idles and breaks."""
+
+    def __init__(self, **cfg):
         self.update_config(cfg or get_human())
 
     def update_config(self, cfg: dict) -> None:
@@ -55,6 +58,8 @@ class Humanizer:
         self.idle_sigma = max(0.05, (idle_hi - idle_lo) / 4)
         self.dwell_mean = (dwell_lo + dwell_hi) / 2
         self.dwell_sigma = max(0.05, (dwell_hi - dwell_lo) / 4)
+        self.idle_rng = _parse_range(cfg.get("idle_after_page", "0.8-2.2"), (0.8, 2.2))
+        self.dwell_rng = _parse_range(cfg.get("page_min_dwell", "1.8-3.0"), (1.8, 3.0))
         self.quiet_hours = cfg.get("quiet_hours", "02:00-06:30")
         self.quiet_mult = float(cfg.get("quiet_mult", 2.0))
         self.break_profiles = [
@@ -85,3 +90,19 @@ class Humanizer:
                 self.actions = 0
                 return
         self.actions += 1
+    async def idle_after_action(self) -> None:
+        """Sleep briefly after an action to mimic natural pacing."""
+        await asyncio.sleep(random.uniform(*self.idle_rng))
+
+    async def page_dwell(self) -> None:
+        """Ensure a minimum dwell time on pages after navigation."""
+        await asyncio.sleep(random.uniform(*self.dwell_rng))
+
+    async def maybe_break(self) -> None:
+        """Occasionally take short, medium, or long breaks."""
+        multiplier = self.quiet_mult if _in_quiet(self.quiet_hours) else 1.0
+        for prob, rng in self.break_profiles:
+            if random.random() < prob * multiplier:
+                lo, hi = rng
+                await asyncio.sleep(random.uniform(lo, hi))
+                return
