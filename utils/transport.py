@@ -15,7 +15,9 @@ from utils import sentinel
 DEFER_PATH = Path("data/deferred_transports.json")
 BLACKLIST_PATH = Path("data/destination_blacklist.json")
 ATTEMPT_PATH = Path("data/transport_attempts.json")
-ATTEMPT_BUDGET = 2  # per vehicle per run
+# Per-vehicle attempt budget.  We track this in ``transport_attempts.json`` to
+# avoid hammering the same vehicle repeatedly in one execution.
+ATTEMPT_BUDGET = 2
 
 # Escalation: after this many deferrals for the same vehicle, try once ignoring caps
 ESCALATE_AFTER_DEFERS = 3
@@ -25,23 +27,31 @@ SLA_HOSPITAL_MIN = 15
 SLA_PRISON_MIN   = 20
 
 def _load_json(p: Path):
+    """Best-effort JSON loader returning an empty dict on failure."""
     try:
         if p.exists():
-            with p.open("r", encoding="utf-8") as f: return json.load(f)
-    except Exception: pass
+            with p.open("r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        pass
     return {}
 
-def _save_json(p: Path, d: dict):
+def _save_json(p: Path, d: dict) -> None:
+    """Persist ``d`` to ``p``; log but ignore on error."""
     try:
         p.parent.mkdir(parents=True, exist_ok=True)
-        with p.open("w", encoding="utf-8") as f: json.dump(d, f, indent=2)
-    except Exception as e:
+        with p.open("w", encoding="utf-8") as f:
+            json.dump(d, f, indent=2)
+    except Exception as e:  # pragma: no cover - I/O failures are rare
         display_error(f"Could not save {p.name}: {e}")
 
 def _row_label(text: str) -> str:
+    """Normalise a row label for blacklist lookups."""
     return (text or "").strip().lower()[:60]
 
-async def _choose_destination_from_modal(page, prefs, mode: str, blacklist: dict, escalate_override: bool=False):
+async def _choose_destination_from_modal(page, prefs, mode: str, blacklist: dict, *,
+                                         escalate_override: bool = False):
+    """Handle the modal listing hospitals or prisons and choose a destination."""
     rows = page.locator("div.modal, .modal, .dialog, .ui-dialog, .popover, body").locator("li, tr, div")
     n = min(await rows.count(), 300)
     candidates = []
@@ -118,6 +128,7 @@ async def _choose_destination_from_modal(page, prefs, mode: str, blacklist: dict
     return None
 
 async def handle_transport_requests(browser):
+    """Process pending hospital or prison transport requests."""
     prefs = get_transport_prefs()
     page = browser.contexts[0].pages[0]
     try:
@@ -166,6 +177,7 @@ async def handle_transport_requests(browser):
             ntry = int(attempts.get(vehicle_id, 0))
             if ntry >= ATTEMPT_BUDGET:
                 continue
+            attempts[vehicle_id] = ntry + 1
 
             try:
                 await page.goto(f"https://www.missionchief.com/vehicles/{vehicle_id}")
