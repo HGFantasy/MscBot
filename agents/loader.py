@@ -1,14 +1,14 @@
 """Dynamic agent loader for MscBot."""
+
 from __future__ import annotations
 
+import asyncio
 import importlib
 import inspect
 import pkgutil
-import asyncio
+from collections.abc import Awaitable
 from pathlib import Path
 from typing import Any, Dict, List
-from pathlib import Path
-from typing import Dict, List
 
 from data.config_settings import get_enabled_agents, get_disabled_agents
 from utils.pretty_print import display_error, display_info
@@ -41,7 +41,11 @@ def load_agents() -> None:
             display_error(f"Failed to import agent module {name}: {e}")
             continue
         for obj in module.__dict__.values():
-            if inspect.isclass(obj) and issubclass(obj, BaseAgent) and obj is not BaseAgent:
+            if (
+                inspect.isclass(obj)
+                and issubclass(obj, BaseAgent)
+                and obj is not BaseAgent
+            ):
                 try:
                     inst = obj()
                     enabled = getattr(inst, "enabled", lambda: True)
@@ -60,7 +64,7 @@ def load_agents() -> None:
 
 def iter_active_agents() -> List[BaseAgent]:
     """Return a list of currently enabled agent instances."""
-    return [_AGENTS[n] for n in list(_ACTIVE)]
+    return [_AGENTS[n] for n in _ACTIVE]
 
 
 def get_agent(name: str) -> BaseAgent | None:
@@ -72,39 +76,33 @@ async def emit(event: str, **kwargs: Any) -> None:
     """Broadcast ``event`` to all active agents.
 
     For an ``event`` named ``foo`` this will invoke an ``on_foo`` method on
-    each agent if present.  Agents may also implement a generic ``on_event``
+    each agent if present. Agents may also implement a generic ``on_event``
     handler which receives the event name via a keyword argument.
     """
 
-    calls: List[tuple[str, str, Any]] = []
+    tasks: List[tuple[str, str, Awaitable[Any]]] = []
     for name in list(_ACTIVE):
         agent = _AGENTS.get(name)
         if not agent:
             continue
-        specific = getattr(agent, f"on_{event}", None)
-        generic = getattr(agent, "on_event", None)
-        for attr, handler, pass_name in (
-            (f"on_{event}", specific, False),
-            ("on_event", generic, True),
-        ):
+        for attr, pass_name in ((f"on_{event}", False), ("on_event", True)):
+            handler = getattr(agent, attr, None)
             if not handler:
                 continue
             try:
-                if inspect.iscoroutinefunction(handler):
-                    if pass_name:
-                        calls.append((name, attr, handler(event=event, **kwargs)))
-                    else:
-                        calls.append((name, attr, handler(**kwargs)))
+                if pass_name:
+                    result = handler(event=event, **kwargs)
                 else:
-                    if pass_name:
-                        handler(event=event, **kwargs)
-                    else:
-                        handler(**kwargs)
+                    result = handler(**kwargs)
+                if inspect.isawaitable(result):
+                    tasks.append((name, attr, result))
             except Exception as e:  # pragma: no cover - defensive
                 display_error(f"Agent {name}.{attr} failed: {e}")
-    if calls:
-        results = await asyncio.gather(*(c for _, _, c in calls), return_exceptions=True)
-        for (name, attr, _), res in zip(calls, results):
+    if tasks:
+        results = await asyncio.gather(
+            *(t for _, _, t in tasks), return_exceptions=True
+        )
+        for (name, attr, _), res in zip(tasks, results):
             if isinstance(res, Exception):
                 display_error(f"Agent {name}.{attr} failed: {res}")
 
@@ -129,4 +127,3 @@ def disable_agent(name: str) -> bool:
         return True
     display_error(f"Disable failed: unknown or inactive agent '{name}'")
     return False
-
