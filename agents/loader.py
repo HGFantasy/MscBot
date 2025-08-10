@@ -69,27 +69,44 @@ def get_agent(name: str) -> BaseAgent | None:
 
 
 async def emit(event: str, **kwargs: Any) -> None:
-    """Broadcast an event to all active agents."""
-    tasks = []
+    """Broadcast ``event`` to all active agents.
+
+    For an ``event`` named ``foo`` this will invoke an ``on_foo`` method on
+    each agent if present.  Agents may also implement a generic ``on_event``
+    handler which receives the event name via a keyword argument.
+    """
+
+    calls: List[tuple[str, str, Any]] = []
     for name in list(_ACTIVE):
         agent = _AGENTS.get(name)
         if not agent:
             continue
-        handler = getattr(agent, "on_event", None)
-        if not handler:
-            continue
-        try:
-            if inspect.iscoroutinefunction(handler):
-                tasks.append(handler(event=event, **kwargs))
-            else:
-                handler(event=event, **kwargs)
-        except Exception as e:  # pragma: no cover - defensive
-            display_error(f"Agent {name} event error: {e}")
-    if tasks:
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        for r in results:
-            if isinstance(r, Exception):
-                display_error(f"Agent event error: {r}")
+        specific = getattr(agent, f"on_{event}", None)
+        generic = getattr(agent, "on_event", None)
+        for attr, handler, pass_name in (
+            (f"on_{event}", specific, False),
+            ("on_event", generic, True),
+        ):
+            if not handler:
+                continue
+            try:
+                if inspect.iscoroutinefunction(handler):
+                    if pass_name:
+                        calls.append((name, attr, handler(event=event, **kwargs)))
+                    else:
+                        calls.append((name, attr, handler(**kwargs)))
+                else:
+                    if pass_name:
+                        handler(event=event, **kwargs)
+                    else:
+                        handler(**kwargs)
+            except Exception as e:  # pragma: no cover - defensive
+                display_error(f"Agent {name}.{attr} failed: {e}")
+    if calls:
+        results = await asyncio.gather(*(c for _, _, c in calls), return_exceptions=True)
+        for (name, attr, _), res in zip(calls, results):
+            if isinstance(res, Exception):
+                display_error(f"Agent {name}.{attr} failed: {res}")
 
 
 def enable_agent(name: str) -> bool:
