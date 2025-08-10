@@ -22,9 +22,11 @@ class BaseAgent:
     async def on_transport_tick(self, **kwargs: Any) -> None:  # noqa: D401
         """Called each iteration of the transport loop."""
 
+
     async def on_event(self, event: str, **kwargs: Any) -> None:  # noqa: D401
         """Handle an arbitrary event broadcast by other agents."""
 
+ main
     async def on_shutdown(self, **kwargs: Any) -> None:  # noqa: D401
         """Called once after all browsers have been closed."""
 

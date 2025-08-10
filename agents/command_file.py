@@ -3,11 +3,19 @@ from __future__ import annotations
 
 from pathlib import Path
 
+
 from data.config_settings import get_command_file
 from utils.pretty_print import display_info, display_error
 
 from .base import BaseAgent
 from .loader import enable_agent, disable_agent, emit
+
+from data.config_settings import get_command_file, reload_config
+from utils.pretty_print import display_info, display_error
+
+from .base import BaseAgent
+from .loader import enable_agent, disable_agent
+ main
 
 
 class CommandFileAgent(BaseAgent):
@@ -49,8 +57,13 @@ class CommandFileAgent(BaseAgent):
                     Path("STOP").touch()
                     display_info("CommandFileAgent: stop")
                 elif cmd == "reload-config":
+
                     await emit("config_reload")
                     display_info("CommandFileAgent: config reload requested")
+
+                    reload_config()
+                    display_info("CommandFileAgent: config reloaded")
+ main
                 elif cmd.startswith("agent-enable "):
                     name = cmd.split(" ", 1)[1]
                     if enable_agent(name):

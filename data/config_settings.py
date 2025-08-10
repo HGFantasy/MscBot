@@ -117,6 +117,7 @@ def get_password(): return os.getenv("MISSIONCHIEF_PASS") or _get("credentials",
 def get_headless():
     return _getbool("browser_settings","headless", False)
 
+
 @_cache
 def get_threads():
     return _getint("browser_settings","browsers", 2)
@@ -134,6 +135,26 @@ def get_transport_delay():
     return _getint("delays","transport", 180)
 
 @_cache
+
+
+@_cache
+def get_threads():
+    return _getint("browser_settings","browsers", 2)
+
+@_cache
+def get_slow_mo_ms():
+    return _getint("browser_settings","slow_mo_ms", 350)
+
+@_cache
+def get_mission_delay():
+    return _getint("delays","missions", 10)
+
+@_cache
+def get_transport_delay():
+    return _getint("delays","transport", 180)
+
+@_cache
+ main
 def get_human():
     preset = _get("human","preset","normal").lower().strip()
     scale = {"chill":0.8, "normal":1.0, "sweaty":1.25}.get(preset,1.0)
@@ -198,6 +219,26 @@ def get_priority_keywords():
     raw = _get("priority","keywords","")
     return [x.strip().lower() for x in raw.split(",") if x.strip()]
 
+
+
+def _dow_key(i):
+    return ["mon","tue","wed","thu","fri","sat","sun"][i]
+
+@_cache
+def get_windows_by_day():
+    return {_dow_key(i): _get("scheduling", _dow_key(i), "") for i in range(7)}
+
+@_cache
+def get_blackout_dates():
+    raw = _get("scheduling","blackout_dates","")
+    return {d.strip() for d in raw.split(",") if d.strip()}
+
+# Backward-compat single active_windows for all days
+@_cache
+def get_global_active_windows():
+    return _get("scheduling", "active_windows", "")
+
+ main
 @_cache
 def get_transport_prefs():
     return {

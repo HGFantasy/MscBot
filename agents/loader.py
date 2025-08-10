@@ -4,9 +4,14 @@ from __future__ import annotations
 import importlib
 import inspect
 import pkgutil
+
 import asyncio
 from pathlib import Path
 from typing import Any, Dict, List
+
+from pathlib import Path
+from typing import Dict, List
+ main
 
 from data.config_settings import get_enabled_agents, get_disabled_agents
 from utils.pretty_print import display_error, display_info
@@ -61,6 +66,7 @@ def iter_active_agents() -> List[BaseAgent]:
     return [_AGENTS[n] for n in list(_ACTIVE)]
 
 
+
 def get_agent(name: str) -> BaseAgent | None:
     """Retrieve a specific agent instance by module name."""
     return _AGENTS.get(name.lower())
@@ -90,6 +96,8 @@ async def emit(event: str, **kwargs: Any) -> None:
                 display_error(f"Agent event error: {r}")
 
 
+
+ main
 def enable_agent(name: str) -> bool:
     """Enable an agent by module name. Returns True if successful."""
     key = name.lower()
