@@ -1,16 +1,23 @@
-
 # Project: MscBot
 # Maintained by: HGFantasy
 # License: MIT
 
-import asyncio, os
+import asyncio
+from pathlib import Path
+
+from dotenv import load_dotenv
 from playwright.async_api import async_playwright
 
 from setup.login import login_and_save_state, launch_with_state
 from data.config_settings import (
-    get_username, get_password, get_threads, get_headless,
-    get_mission_delay, get_transport_delay,
-    get_eta_filter, get_transport_prefs
+    get_username,
+    get_password,
+    get_threads,
+    get_headless,
+    get_mission_delay,
+    get_transport_delay,
+    get_eta_filter,
+    get_transport_prefs,
 )
 from utils.dispatcher import navigate_and_dispatch
 from utils.mission_data import check_and_grab_missions
@@ -22,19 +29,32 @@ from utils.runtime_flags import wait_if_paused, should_stop
 from utils.metrics import maybe_write
 from agents import load_agents, emit
 
+load_dotenv()
 load_agents()
 
 
-def _validate_or_die():
-    filt = get_eta_filter(); tp = get_transport_prefs()
+def _validate_or_die() -> None:
+    """Validate configuration values and exit on invalid entries."""
+    filt = get_eta_filter()
+    tp = get_transport_prefs()
     errs = []
-    if filt["max_km"] <= 0 or filt["max_minutes"] <= 0: errs.append("dispatch_filter: max_km/minutes must be > 0")
-    if tp["max_hospital_km"] <= 0 or tp["max_prison_km"] <= 0: errs.append("transport_prefs: max_*_km must be > 0")
-    if tp["max_hospital_tax_pct"] < 0 or tp["max_prison_tax_pct"] < 0: errs.append("transport_prefs: tax pct must be >= 0")
+
+    if filt["max_km"] <= 0 or filt["max_minutes"] <= 0:
+        errs.append("dispatch_filter: max_km/minutes must be > 0")
+
+    if tp["max_hospital_km"] <= 0 or tp["max_prison_km"] <= 0:
+        errs.append("transport_prefs: max_*_km must be > 0")
+
+    if tp["max_hospital_tax_pct"] < 0 or tp["max_prison_tax_pct"] < 0:
+        errs.append("transport_prefs: tax pct must be >= 0")
+
     if errs:
-        for e in errs: display_error("CONFIG ERROR: " + e)
+        for e in errs:
+            display_error(f"CONFIG ERROR: {e}")
         raise SystemExit(2)
+
     display_info("Config validation: OK.")
+
 
 async def transport_logic(browser):
     display_info("Starting transportation logic.")
@@ -52,6 +72,7 @@ async def transport_logic(browser):
         except Exception as e:
             display_error(f"Error in transport logic: {e}")
 
+
 async def mission_logic(browsers_for_missions):
     display_info("Starting mission logic.")
     while True:
@@ -61,8 +82,11 @@ async def mission_logic(browsers_for_missions):
                 display_info("STOP requested: exiting mission loop.")
                 break
             await wait_if_paused()
-            if os.path.exists("data/vehicle_data.json"):
-                await check_and_grab_missions(browsers_for_missions, len(browsers_for_missions))
+            vehicle_data = Path("data/vehicle_data.json")
+            if vehicle_data.exists():
+                await check_and_grab_missions(
+                    browsers_for_missions, len(browsers_for_missions)
+                )
             else:
                 try:
                     await gather_vehicle_data([browsers_for_missions[0]], 1)
@@ -75,6 +99,7 @@ async def mission_logic(browsers_for_missions):
         except Exception as e:
             display_error(f"Error in mission logic: {e}")
 
+
 async def main():
     display_info("MscBot starting…")
     _validate_or_die()
@@ -82,27 +107,40 @@ async def main():
 
     username, password = get_username(), get_password()
     headless, threads = get_headless(), max(2, int(get_threads()))
-    display_info(f"Config → threads={threads}, headless={headless}, has_user={bool(username)}")
+    display_info(
+        f"Config → threads={threads}, headless={headless}, has_user={bool(username)}"
+    )
     if not username or not password:
-        display_error("Missing credentials. Set them in config.ini or via env vars."); return
+        display_error("Missing credentials. Set them in config.ini or via env vars.")
+        return
 
-    state_path = "auth/storage.json"; os.makedirs("auth", exist_ok=True)
+    state_path = Path("auth") / "storage.json"
+    state_path.parent.mkdir(parents=True, exist_ok=True)
 
     async with async_playwright() as p:
-        if not os.path.exists(state_path):
-            ok = await login_and_save_state(username, password, headless, p, state_path=state_path)
-            if not ok: display_error("Login-once failed; cannot continue."); return
+        if not state_path.exists():
+            ok = await login_and_save_state(
+                username, password, headless, p, state_path=state_path
+            )
+            if not ok:
+                display_error("Login-once failed; cannot continue.")
+                return
 
-        try: set_max_concurrency(threads)
-        except Exception: set_max_concurrency(2)
+        try:
+            set_max_concurrency(threads)
+        except Exception:
+            set_max_concurrency(2)
 
         display_info(f"Launching {threads} authenticated browsers…")
-        browsers = [await launch_with_state(headless, p, state_path) for _ in range(threads)]
+        launchers = [launch_with_state(headless, p, state_path) for _ in range(threads)]
+        browsers = await asyncio.gather(*launchers)
         if len(browsers) < 2:
             display_error("Unexpected: <2 browsers after launch_with_state.")
             for b in browsers:
-                try: await b.close()
-                except Exception: pass
+                try:
+                    await b.close()
+                except Exception:
+                    pass
             return
 
         browser_for_transport, browsers_for_missions = browsers[0], browsers[1:]
@@ -120,6 +158,7 @@ async def main():
                 except Exception:
                     pass
             await emit("shutdown")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

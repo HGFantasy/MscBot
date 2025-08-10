@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Load environment variables from a `.env` file at startup.
+- Launch authenticated browsers concurrently for faster startup.
+- Simplified configuration validation for clarity.
+- Updated documentation and licensing.
 - Reworked update check to track main repository commits and auto-update on startup.
 - Auto-update now pulls new files and restarts the bot when updates are detected.
 
