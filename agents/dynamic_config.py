@@ -49,6 +49,3 @@ class DynamicConfigAgent(BaseAgent):
             except Exception as e:
                 display_error(f"DynamicConfigAgent reload failed: {e}")
 
-        except Exception as e:
-            display_error(f"DynamicConfigAgent reload failed: {e}")
-
