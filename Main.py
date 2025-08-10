@@ -10,7 +10,6 @@ from setup.login import login_and_save_state, launch_with_state
 from data.config_settings import (
     get_username, get_password, get_threads, get_headless,
     get_mission_delay, get_transport_delay,
-    get_mission_delay, get_transport_delay, get_human,
     get_eta_filter, get_transport_prefs
 )
 from utils.dispatcher import navigate_and_dispatch
@@ -44,29 +43,7 @@ async def _run_agents(event: str, **kwargs) -> None:
             if isinstance(result, Exception):
                 display_error(f"Agent {name}.{event} failed: {result}")
 
-load_agents()
-
-async def _run_agents(event: str, **kwargs) -> None:
-    tasks = []
-    for agent in iter_active_agents():
-        func = getattr(agent, event, None)
-        if not func:
-            continue
-        try:
-            if inspect.iscoroutinefunction(func):
-                tasks.append((agent.__class__.__name__, func(**kwargs)))
-            else:
-                func(**kwargs)
-        except Exception as e:
-            display_error(f"Agent {agent.__class__.__name__}.{event} failed: {e}")
-    if tasks:
-        results = await asyncio.gather(*(c for _, c in tasks), return_exceptions=True)
-        for (name, _), result in zip(tasks, results):
-            if isinstance(result, Exception):
-                display_error(f"Agent {name}.{event} failed: {result}")
-
 def _validate_or_die():
-    from data.config_settings import get_eta_filter, get_transport_prefs
     filt = get_eta_filter(); tp = get_transport_prefs()
     errs = []
     if filt["max_km"] <= 0 or filt["max_minutes"] <= 0: errs.append("dispatch_filter: max_km/minutes must be > 0")
@@ -86,8 +63,8 @@ async def transport_logic(browser):
             await wait_if_paused()
             await handle_transport_requests(browser)
             await _run_agents("after_transport_tick", browser=browser)
-            await human.page_dwell(); await human.idle_after_action(); await sleep_jitter(0.6, 0.8)
-            await asyncio.sleep(get_transport_delay()); maybe_write()
+            await asyncio.sleep(get_transport_delay())
+            maybe_write()
         except Exception as e:
             display_error(f"Error in transport logic: {e}")
 
@@ -105,8 +82,8 @@ async def mission_logic(browsers_for_missions):
                 except Exception as e: display_error(f"Vehicle data gather failed: {e}")
             await navigate_and_dispatch(browsers_for_missions)
             await _run_agents("after_mission_tick", browsers=browsers_for_missions)
-            await human.page_dwell(); await human.idle_after_action(); await sleep_jitter(0.6, 0.8)
-            await asyncio.sleep(get_mission_delay()); maybe_write()
+            await asyncio.sleep(get_mission_delay())
+            maybe_write()
         except Exception as e:
             display_error(f"Error in mission logic: {e}")
 
