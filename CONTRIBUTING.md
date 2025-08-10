@@ -17,14 +17,17 @@ Thanks for helping improve MscBot!
    pip install -r requirements.txt
    python -m playwright install
    ```
-4. Configure `config.ini` (or set env vars `MISSIONCHIEF_USER`, `MISSIONCHIEF_PASS`).
+4. Configure `config.ini` or create a `.env` file with `MISSIONCHIEF_USER` and
+   `MISSIONCHIEF_PASS`.
 
 ## Dev workflow
 - Branch from `main`: `feat/xyz`, `fix/bug-123`
-- Run lints locally:
+- Run lints and tests locally:
   ```bash
   pip install -r dev-requirements.txt
+  black Main.py
   ruff check .
+  pytest
   ```
 - Commit using clear messages (Conventional Commits encouraged).
 - Open a PR with a short description of changes and testing notes.
