@@ -29,9 +29,7 @@ from utils.runtime_flags import wait_if_paused, should_stop
 from utils.metrics import maybe_write
 from utils.browser import close_browsers
 from agents import load_agents, emit
-
-load_dotenv()
-load_agents()
+from agents.update_check import UpdateCheckAgent
 
 
 def _validate_or_die() -> None:
@@ -162,5 +160,14 @@ async def main():
             await emit("shutdown")
 
 
+async def bootstrap() -> None:
+    """Run the update check before loading the bot."""
+
+    await UpdateCheckAgent()._check_now(auto_update=True)
+    load_dotenv()
+    load_agents()
+    await main()
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(bootstrap())
