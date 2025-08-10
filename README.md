@@ -1,5 +1,11 @@
-# MscBot v1.0
+# MscBot v2.0
 Maintainer: **HGFantasy** — License: **MIT**
+
+## What's new in v2.0
+- Agent-based architecture with an inter-agent event bus for runtime coordination.
+- Command-file and dynamic-config agents enable hot reloads and runtime controls.
+- HumanAgent delivers adaptive human-like pacing; missions can be deferred and agents toggled on the fly.
+- GitHub update alerts, metrics summaries, and ambulance-only dispatch mode.
 
 ## Quickstart (Windows PowerShell)
 ```powershell
@@ -13,3 +19,5 @@ $env:PYTHONUNBUFFERED="1"
 ```
 
 See `config.sample.ini` for configuration options. Copy it to `config.ini` and edit.
+
+For details on writing your own agents, check [agents/README.md](agents/README.md).
