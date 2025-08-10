@@ -289,6 +289,35 @@ async def _selected_vehicle_ids(page) -> List[str]:
     except Exception:
         return []
 
+async def _click_dispatch(page) -> bool:
+    """Click the dispatch/alarm button on a mission page.
+
+    The site uses a few variations for the dispatch button depending on
+    context (regular missions, top-ups, ambulance-only, etc.).  We try a
+    sequence of reasonably specific selectors and return ``True`` on the
+    first successful click.  ``False`` is returned if none of the selectors
+    could be activated.
+    """
+
+    selectors = [
+        "#mission_alarm_btn",
+        "#dispatch_button",
+        "#alarm_button",
+        'button:has-text("Alarm")',
+        'button:has-text("Dispatch")',
+        'a.btn-success:has-text("Alarm")',
+        'a.btn-success:has-text("Dispatch")',
+    ]
+    for sel in selectors:
+        try:
+            btn = page.locator(sel).first
+            await btn.wait_for(state="visible", timeout=4000)
+            await btn.click()
+            return True
+        except Exception:
+            continue
+    return False
+
 async def _handle_stuck_cancel(ctx) -> None:
     """Option #13: if enabled and missions look stuck for long, recall one unit."""
     if not CANCEL_STUCK:
@@ -350,14 +379,10 @@ async def _handle_topups(ctx, max_minutes:int, max_km:float, max_pick:int) -> No
                     # refresh have map
                     have = _count_types(await _fetch_vehicle_rows(page), checked_only=True)
             if added_total > 0:
-                btn = page.locator('button:has-text("Alarm"), button:has-text("Dispatch"), input[type="submit"], a.btn-success').first
-                try:
-                    await btn.wait_for(state="visible", timeout=8000)
-                    await btn.click(); await ensure_settled(page)
+                if await _click_dispatch(page):
+                    await ensure_settled(page)
                     inc("missions_topped_up", 1); maybe_write()
                     display_info(f"[topup] Mission {mid}: sent +{added_total} (req-based).")
-                except Exception:
-                    pass
             # Clear the record (single pass)
             due.pop(mid, None); dirty=True
         except Exception as e:
@@ -493,11 +518,11 @@ async def navigate_and_dispatch(browsers):
                     display_info(f"Mission {mission_id}: deferred {delay_min} min (no ambulance).")
                     continue
                 await _check_box_by_id(page, amb["id"])
-                btn = page.locator('button:has-text("Alarm"), button:has-text("Dispatch"), input[type="submit"], a.btn-success').first
                 try:
                     picked_ids = [amb["id"]]
-                    await btn.wait_for(state="visible", timeout=10000)
-                    await btn.click(); await ensure_settled(page)
+                    if not await _click_dispatch(page):
+                        raise RuntimeError("dispatch button not ready")
+                    await ensure_settled(page)
                     inc("missions_dispatched", 1); maybe_write()
                     display_info(f"Mission {mission_id}: dispatched ambulance-only.")
                     await _record_cooldowns(picked_ids)
@@ -569,12 +594,12 @@ async def navigate_and_dispatch(browsers):
                     await _uncheck_box_by_id(page, r["id"])
 
             # Dispatch / click
-            btn = page.locator('button:has-text("Alarm"), button:has-text("Dispatch"), input[type="submit"], a.btn-success').first
             try:
                 # Capture chosen IDs for cooldowns/soft caps
                 picked_ids = await _selected_vehicle_ids(page)
-                await btn.wait_for(state="visible", timeout=10000)
-                await btn.click(); await ensure_settled(page)
+                if not await _click_dispatch(page):
+                    raise RuntimeError("dispatch button not ready")
+                await ensure_settled(page)
                 inc("missions_dispatched", 1); maybe_write()
                 display_info(
                     f"Mission {mission_id}: dispatched (base {base_selected}, +types {added}, widen x{widen_mult:.2f})."
