@@ -4,6 +4,9 @@ from __future__ import annotations
 import importlib
 import inspect
 import pkgutil
+import asyncio
+from pathlib import Path
+from typing import Any, Dict, List
 from pathlib import Path
 from typing import Dict, List
 
@@ -58,6 +61,35 @@ def load_agents() -> None:
 def iter_active_agents() -> List[BaseAgent]:
     """Return a list of currently enabled agent instances."""
     return [_AGENTS[n] for n in list(_ACTIVE)]
+
+
+def get_agent(name: str) -> BaseAgent | None:
+    """Retrieve a specific agent instance by module name."""
+    return _AGENTS.get(name.lower())
+
+
+async def emit(event: str, **kwargs: Any) -> None:
+    """Broadcast an event to all active agents."""
+    tasks = []
+    for name in list(_ACTIVE):
+        agent = _AGENTS.get(name)
+        if not agent:
+            continue
+        handler = getattr(agent, "on_event", None)
+        if not handler:
+            continue
+        try:
+            if inspect.iscoroutinefunction(handler):
+                tasks.append(handler(event=event, **kwargs))
+            else:
+                handler(event=event, **kwargs)
+        except Exception as e:  # pragma: no cover - defensive
+            display_error(f"Agent {name} event error: {e}")
+    if tasks:
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for r in results:
+            if isinstance(r, Exception):
+                display_error(f"Agent event error: {r}")
 
 
 def enable_agent(name: str) -> bool:

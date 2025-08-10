@@ -9,6 +9,7 @@ from playwright.async_api import async_playwright
 from setup.login import login_and_save_state, launch_with_state
 from data.config_settings import (
     get_username, get_password, get_threads, get_headless,
+    get_mission_delay, get_transport_delay,
     get_mission_delay, get_transport_delay, get_human,
     get_eta_filter, get_transport_prefs
 )
@@ -17,14 +18,31 @@ from utils.mission_data import check_and_grab_missions
 from utils.pretty_print import display_info, display_error
 from utils.transport import handle_transport_requests
 from utils.vehicle_data import gather_vehicle_data
-from utils.politeness import set_max_concurrency, sleep_jitter
-from utils.humanize import Humanizer
+from utils.politeness import set_max_concurrency
 from utils.runtime_flags import wait_if_paused, should_stop
-from utils.schedule_windows import wait_if_outside
 from utils.metrics import maybe_write
 from agents.loader import load_agents, iter_active_agents
 
-human = Humanizer(**get_human())
+load_agents()
+
+async def _run_agents(event: str, **kwargs) -> None:
+    tasks = []
+    for agent in iter_active_agents():
+        func = getattr(agent, event, None)
+        if not func:
+            continue
+        try:
+            if inspect.iscoroutinefunction(func):
+                tasks.append((agent.__class__.__name__, func(**kwargs)))
+            else:
+                func(**kwargs)
+        except Exception as e:
+            display_error(f"Agent {agent.__class__.__name__}.{event} failed: {e}")
+    if tasks:
+        results = await asyncio.gather(*(c for _, c in tasks), return_exceptions=True)
+        for (name, _), result in zip(tasks, results):
+            if isinstance(result, Exception):
+                display_error(f"Agent {name}.{event} failed: {result}")
 
 load_agents()
 
@@ -65,8 +83,9 @@ async def transport_logic(browser):
         try:
             await _run_agents("on_transport_tick", browser=browser)
             if should_stop(): display_info("STOP requested: exiting transport loop."); break
-            await wait_if_paused(); await wait_if_outside(); await human.maybe_break()
+            await wait_if_paused()
             await handle_transport_requests(browser)
+            await _run_agents("after_transport_tick", browser=browser)
             await human.page_dwell(); await human.idle_after_action(); await sleep_jitter(0.6, 0.8)
             await asyncio.sleep(get_transport_delay()); maybe_write()
         except Exception as e:
@@ -78,13 +97,14 @@ async def mission_logic(browsers_for_missions):
         try:
             await _run_agents("on_mission_tick", browsers=browsers_for_missions)
             if should_stop(): display_info("STOP requested: exiting mission loop."); break
-            await wait_if_paused(); await wait_if_outside(); await human.maybe_break()
+            await wait_if_paused()
             if os.path.exists("data/vehicle_data.json"):
                 await check_and_grab_missions(browsers_for_missions, len(browsers_for_missions))
             else:
                 try: await gather_vehicle_data([browsers_for_missions[0]], 1)
                 except Exception as e: display_error(f"Vehicle data gather failed: {e}")
             await navigate_and_dispatch(browsers_for_missions)
+            await _run_agents("after_mission_tick", browsers=browsers_for_missions)
             await human.page_dwell(); await human.idle_after_action(); await sleep_jitter(0.6, 0.8)
             await asyncio.sleep(get_mission_delay()); maybe_write()
         except Exception as e:

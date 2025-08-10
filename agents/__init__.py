@@ -5,6 +5,8 @@ from .loader import (
     iter_active_agents,
     enable_agent,
     disable_agent,
+    get_agent,
+    emit,
 )
 
 __all__ = [
@@ -12,4 +14,6 @@ __all__ = [
     "iter_active_agents",
     "enable_agent",
     "disable_agent",
+    "get_agent",
+    "emit",
 ]

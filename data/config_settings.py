@@ -44,17 +44,6 @@ else:
         },
         "mission_age": {"min_age_seconds": "60"},
         "priority": {"keywords": ""},
-        "scheduling": {
-            "mon": "05:00-12:06,15:00-19:34,20:12-00:15",
-            "tue": "05:00-12:06,15:00-19:34,20:12-00:15",
-            "wed": "05:00-12:06,15:00-19:34,20:12-00:15",
-            "thu": "05:00-12:06,15:00-19:34,20:12-00:15",
-            "fri": "05:00-12:06,15:00-19:34,20:12-00:15",
-            "sat": "05:00-12:06,15:00-19:34,20:12-00:15",
-            "sun": "05:00-12:06,15:00-19:34,20:12-00:15",
-            "blackout_dates": "",
-            "active_windows": "05:00-12:06,15:00-19:34,20:12-00:15"
-        },
         "transport_prefs": {
             "max_hospital_km": "25",
             "max_hospital_tax_pct": "20",
@@ -127,6 +116,24 @@ def get_password(): return os.getenv("MISSIONCHIEF_PASS") or _get("credentials",
 @_cache
 def get_headless():
     return _getbool("browser_settings","headless", False)
+
+@_cache
+def get_threads():
+    return _getint("browser_settings","browsers", 2)
+
+@_cache
+def get_slow_mo_ms():
+    return _getint("browser_settings","slow_mo_ms", 350)
+
+@_cache
+def get_mission_delay():
+    return _getint("delays","missions", 10)
+
+@_cache
+def get_transport_delay():
+    return _getint("delays","transport", 180)
+
+@_cache
 
 @_cache
 def get_threads():

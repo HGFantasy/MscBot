@@ -11,6 +11,9 @@ MscBot supports a lightweight agent system. Each `*.py` file inside the
    - `on_start` – called once after configuration validation.
    - `on_mission_tick` – called every mission loop iteration.
    - `on_transport_tick` – called every transport loop iteration.
+   - `after_mission_tick` – called after mission logic completes each iteration.
+   - `after_transport_tick` – called after transport logic completes each iteration.
+   - `on_event` – react to custom events broadcast by other agents.
    - `on_shutdown` – called once when the bot exits.
 3. Place your class in the module's global scope so the loader can find it.
 4. Restart the bot; the agent is loaded automatically—no registration is
@@ -28,6 +31,25 @@ class MyAgent(BaseAgent):
 
 Agents can use any utilities from the rest of the project and may read
 configuration via the helpers in `data.config_settings`.
+
+### Inter-agent events
+
+Agents may communicate by broadcasting events:
+
+```python
+from agents import emit
+
+await emit("config_reload")  # ask dynamic config agent to reload
+```
+
+Handle events by overriding `on_event`:
+
+```python
+class MyAgent(BaseAgent):
+    async def on_event(self, event: str, **kwargs):
+        if event == "config_reloaded":
+            print("config updated!")
+```
 
 ## Enabling or disabling agents
 

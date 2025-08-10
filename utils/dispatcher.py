@@ -12,6 +12,7 @@ from utils.pretty_print import display_info, display_error
 from utils.politeness import goto_safe, ensure_settled, sleep_jitter
 from utils.metrics import inc, maybe_write
 from utils import sentinel
+from agents.loader import get_agent, emit
 from data.config_settings import (
     get_eta_filter,
     get_defer_config,
@@ -25,7 +26,6 @@ from data.config_settings import (
 from utils.eta_filter import count_vehicles_within_limits, select_vehicles_within_limits
 
 # ----------------- Paths / Tunables -----------------
-DEFER_PATH      = Path("data/deferred_missions.json")
 ATTEMPT_PATH    = Path("data/mission_attempts.json")
 VEH_CD_PATH     = Path("data/vehicle_cooldowns.json")
 TYPE_CAPS_PATH  = Path("data/type_caps.json")
@@ -390,12 +390,9 @@ async def navigate_and_dispatch(browsers):
     max_minutes_base = int(filt.get("max_minutes", 25))
     max_km_base  = float(filt.get("max_km", 25.0))
     max_pick     = int(filt.get("max_per_mission", 6))
-    defer_cfg    = get_defer_config()
-    dmin = int(defer_cfg.get("min_minutes", 5))
-    dmax = int(defer_cfg.get("max_minutes", 10))
 
+    defer_agent = get_agent("defer")
     now = int(time.time())
-    defer    = _load_json(DEFER_PATH)
     attempts = _load_json(ATTEMPT_PATH)
 
     total_loaded = len(all_missions)
@@ -444,8 +441,8 @@ async def navigate_and_dispatch(browsers):
         if ntry >= ATTEMPT_BUDGET:
             continue
 
-        rec = defer.get(mission_id, {"defer_count": 0, "next_check": 0})
-        if int(rec.get("next_check", 0)) > now:
+        rec = defer_agent.get(mission_id) if defer_agent else {}
+        if defer_agent and defer_agent.skip(mission_id, now):
             continue
 
         widen_mult = min(1.0 + int(rec.get("defer_count", 0)) * adaptive_step, adaptive_max)
@@ -478,6 +475,13 @@ async def navigate_and_dispatch(browsers):
                     None,
                 )
                 if not amb:
+                    await emit(
+                        "defer_mission",
+                        mission_id=mission_id,
+                        reason="no ambulance within limits",
+                    )
+                    inc("missions_deferred", 1)
+                    maybe_write()
                     delay_min = random.randint(dmin, dmax)
                     defer[mission_id] = {
                         "next_check": now + delay_min * 60,
@@ -500,6 +504,8 @@ async def navigate_and_dispatch(browsers):
                     stuck = _load_json(STUCK_PATH)
                     stuck[mission_id] = {"dispatched_ts": int(time.time())}
                     _save_json(STUCK_PATH, stuck)
+                    if defer_agent:
+                        defer_agent.clear(mission_id)
                     defer.pop(mission_id, None)
                     attempts.pop(mission_id, None)
                 except Exception as e:
@@ -514,6 +520,12 @@ async def navigate_and_dispatch(browsers):
             # Check eligibility (generic gate)
             eligible = await count_vehicles_within_limits(page, max_minutes, max_km, stop_at=1)
             if eligible < 1:
+                await emit(
+                    "defer_mission",
+                    mission_id=mission_id,
+                    reason=f"no vehicles within limits (x{widen_mult:.2f})",
+                )
+                inc("missions_deferred", 1); maybe_write()
                 delay_min = random.randint(dmin, dmax)
                 defer[mission_id] = {
                     "next_check": now + delay_min * 60,
@@ -581,7 +593,8 @@ async def navigate_and_dispatch(browsers):
                 }
                 _save_json(TOPUP_PATH, due)
 
-                defer.pop(mission_id, None)
+                if defer_agent:
+                    defer_agent.clear(mission_id)
                 attempts.pop(mission_id, None)
             except Exception as e:
                 attempts[mission_id] = ntry + 1
@@ -597,7 +610,6 @@ async def navigate_and_dispatch(browsers):
         await ensure_settled(page)
 
     # Persist state & adaptive pacing
-    _save_json(DEFER_PATH, defer)
     _save_json(ATTEMPT_PATH, attempts)
     maybe_write()
 
