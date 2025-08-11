@@ -8,7 +8,7 @@ import inspect
 import pkgutil
 from collections.abc import Awaitable
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from data.config_settings import get_enabled_agents, get_disabled_agents
 from utils.pretty_print import display_error, display_info
@@ -16,7 +16,7 @@ from utils.pretty_print import display_error, display_info
 from .base import BaseAgent
 
 
-_AGENTS: Dict[str, BaseAgent] = {}
+_AGENTS: dict[str, BaseAgent] = {}
 _ACTIVE: set[str] = set()
 
 
@@ -62,7 +62,7 @@ def load_agents() -> None:
     display_info(msg)
 
 
-def iter_active_agents() -> List[BaseAgent]:
+def iter_active_agents() -> list[BaseAgent]:
     """Return a list of currently enabled agent instances."""
     return [_AGENTS[n] for n in _ACTIVE]
 
@@ -80,7 +80,7 @@ async def emit(event: str, **kwargs: Any) -> None:
     handler which receives the event name via a keyword argument.
     """
 
-    tasks: List[tuple[str, str, Awaitable[Any]]] = []
+    tasks: list[tuple[str, str, Awaitable[Any]]] = []
     for name in list(_ACTIVE):
         agent = _AGENTS.get(name)
         if not agent:

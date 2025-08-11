@@ -9,7 +9,7 @@
 from __future__ import annotations
 import json, random, time, math, os, re
 from pathlib import Path
-from typing import Dict, Any, List, Tuple
+from typing import Any
 from utils.pretty_print import display_info, display_error
 from utils.politeness import goto_safe, ensure_settled, sleep_jitter
 from utils.metrics import inc, maybe_write
@@ -44,7 +44,7 @@ TOPUP_MIN_SEC = 120  # second-wave recheck window (min/max randomized)
 TOPUP_MAX_SEC = 240
 
 # Type keywords → normalized type
-TYPE_KEYWORDS: Dict[str, List[str]] = {
+TYPE_KEYWORDS: dict[str, list[str]] = {
     "engine": ["fire engine", "engine", "pumper", "lfb"],
     "ladder": ["ladder", "aerial", "truck", "tl", "platform"],
     "rescue": ["rescue", "heavy rescue", "rsv"],
@@ -71,11 +71,11 @@ DEFAULT_SOFT_CAPS = {
 BANDS = [(0.0, 10.0), (10.0, 20.0), (20.0, 40.0)]
 
 # --- Hotfix from earlier: stable "first seen" per mission for this run (age gate) ---
-RUN_FIRST_SEEN: Dict[str, int] = {}
+RUN_FIRST_SEEN: dict[str, int] = {}
 
 
 # ----------------- Utilities -----------------
-def _load_json(p: Path) -> Dict[str, Any]:
+def _load_json(p: Path) -> dict[str, Any]:
     try:
         if p.exists():
             with p.open("r", encoding="utf-8") as f:
@@ -85,7 +85,7 @@ def _load_json(p: Path) -> Dict[str, Any]:
     return {}
 
 
-def _save_json(p: Path, d: Dict[str, Any]) -> None:
+def _save_json(p: Path, d: dict[str, Any]) -> None:
     try:
         p.parent.mkdir(parents=True, exist_ok=True)
         with p.open("w", encoding="utf-8") as f:
@@ -138,7 +138,7 @@ def _parse_km(text: str) -> float | None:
     return float(m.group(1)) if m else None
 
 
-async def _fetch_vehicle_rows(page) -> List[Dict[str, Any]]:
+async def _fetch_vehicle_rows(page) -> list[dict[str, Any]]:
     """
     Gather available vehicle checkboxes on mission page with their row text.
     """
@@ -154,7 +154,7 @@ async def _fetch_vehicle_rows(page) -> List[Dict[str, Any]]:
         return out;
     }"""
     )
-    items: List[Dict[str, Any]] = []
+    items: list[dict[str, Any]] = []
     for r in rows or []:
         txt = r.get("text") or ""
         items.append(
@@ -191,9 +191,9 @@ async def _uncheck_box_by_id(page, vid: str) -> bool:
 
 
 def _count_types(
-    rows: List[Dict[str, Any]], checked_only: bool = True
-) -> Dict[str, int]:
-    c: Dict[str, int] = {}
+    rows: list[dict[str, Any]], checked_only: bool = True
+) -> dict[str, int]:
+    c: dict[str, int] = {}
     for r in rows:
         if checked_only and not r["checked"]:
             continue
@@ -215,7 +215,7 @@ def _distance_band(km: float | None) -> int:
 
 async def _select_more_of_type(
     page,
-    rows: List[Dict[str, Any]],
+    rows: list[dict[str, Any]],
     typ: str,
     need: int,
     max_minutes: int,
@@ -282,7 +282,7 @@ async def _select_more_of_type(
     return added
 
 
-def _parse_requirements(text: str) -> Dict[str, int]:
+def _parse_requirements(text: str) -> dict[str, int]:
     """
     Option #1: lightweight requirements parser from mission page text.
     Looks for patterns like '2 Ladder', '1 Hazmat', '3 Ambulance' etc.
@@ -290,7 +290,7 @@ def _parse_requirements(text: str) -> Dict[str, int]:
     if not text:
         return {}
     t = text.lower()
-    req: Dict[str, int] = {}
+    req: dict[str, int] = {}
     # Common forms: "2x Ladder", "2 Ladder", "Requires: 2 Ladder", etc.
     for typ, kws in TYPE_KEYWORDS.items():
         for kw in kws:
@@ -299,7 +299,7 @@ def _parse_requirements(text: str) -> Dict[str, int]:
     return req
 
 
-async def _requirements_from_page(page) -> Dict[str, int]:
+async def _requirements_from_page(page) -> dict[str, int]:
     try:
         # Read a reasonably big slice of text; avoid super-specific selectors
         txt = await page.inner_text("body")
@@ -310,8 +310,8 @@ async def _requirements_from_page(page) -> Dict[str, int]:
 
 
 def _soft_prioritize(
-    items: List[Tuple[str, str, Dict[str, Any]]],
-) -> List[Tuple[str, str, Dict[str, Any]]]:
+    items: list[tuple[str, str, dict[str, Any]]],
+) -> list[tuple[str, str, dict[str, Any]]]:
     # Items contain (title, mission_id, data). Use keyword score + age as tiebreaker.
     def score(title: str, seen_ts: int) -> int:
         s = _priority_score(title)
@@ -325,7 +325,7 @@ def _soft_prioritize(
     )
 
 
-async def _record_cooldowns(picked_ids: List[str]) -> None:
+async def _record_cooldowns(picked_ids: list[str]) -> None:
     if not picked_ids:
         return
     cd = _load_json(VEH_CD_PATH)
@@ -339,7 +339,7 @@ async def _record_cooldowns(picked_ids: List[str]) -> None:
     )
 
 
-async def _selected_vehicle_ids(page) -> List[str]:
+async def _selected_vehicle_ids(page) -> list[str]:
     try:
         ids = await page.evaluate(
             """()=>{
@@ -479,7 +479,7 @@ async def _handle_topups(ctx, max_minutes: int, max_km: float, max_pick: int) ->
 async def navigate_and_dispatch(browsers):
     # Load snapshot
     try:
-        with open("data/mission_data.json", "r", encoding="utf-8") as f:
+        with open("data/mission_data.json", encoding="utf-8") as f:
             all_missions = json.load(f) or {}
     except Exception as e:
         display_error(f"Could not read mission_data.json: {e}")
@@ -507,7 +507,7 @@ async def navigate_and_dispatch(browsers):
     )
 
     # Build candidates (exclude too-young; then apply our own priority scoring)
-    cand: List[Tuple[str, str, Dict[str, Any]]] = []
+    cand: list[tuple[str, str, dict[str, Any]]] = []
     for mid, data in all_missions.items():
         if mid not in RUN_FIRST_SEEN:
             s = int(data.get("seen_ts", now))
