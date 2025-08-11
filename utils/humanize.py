@@ -61,8 +61,6 @@ class Humanizer:
         self.idle_sigma = max(0.05, (idle_hi - idle_lo) / 4)
         self.dwell_mean = (dwell_lo + dwell_hi) / 2
         self.dwell_sigma = max(0.05, (dwell_hi - dwell_lo) / 4)
-        self.idle_rng = _parse_range(cfg.get("idle_after_page", "0.8-2.2"), (0.8, 2.2))
-        self.dwell_rng = _parse_range(cfg.get("page_min_dwell", "1.8-3.0"), (1.8, 3.0))
         self.quiet_hours = cfg.get("quiet_hours", "02:00-06:30")
         self.quiet_mult = float(cfg.get("quiet_mult", 2.0))
         self.break_profiles = [
