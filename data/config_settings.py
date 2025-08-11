@@ -2,114 +2,148 @@
 # Maintained by: HGFantasy
 # License: MIT
 
+from __future__ import annotations
+
 import configparser
 import os
 from pathlib import Path
 from functools import lru_cache
+from typing import Any
+
+import tomllib
 
 THIS_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = THIS_DIR.parent
-CONFIG_PATH = PROJECT_ROOT / "config.ini"
+INI_PATH = PROJECT_ROOT / "config.ini"
+TOML_PATH = PROJECT_ROOT / "config.toml"
 
-config = configparser.ConfigParser()
-if CONFIG_PATH.exists():
-    config.read(CONFIG_PATH, encoding="utf-8")
-else:
-    config.read_dict(
-        {
-            "credentials": {"username": "", "password": ""},
-            "browser_settings": {
-                "headless": "false",
-                "browsers": "2",
-                "slow_mo_ms": "350",
-            },
-            "delays": {"missions": "10", "transport": "180"},
-            "human": {
-                "preset": "normal",  # chill | normal | sweaty
-                "short_break_prob": "0.06",
-                "short_break_range": "15-45",
-                "medium_break_prob": "0.03",
-                "medium_break_range": "120-360",
-                "long_break_prob": "0.008",
-                "long_break_range": "900-1800",
-                "quiet_hours": "02:00-06:30",
-                "idle_after_page": "0.8-2.2",
-                "page_min_dwell": "1.8-3.0",
-            },
-            "dispatch_filter": {
-                "enable_eta_filter": "true",
-                "max_eta_minutes": "25",
-                "max_distance_km": "25",
-                "max_per_mission": "6",
-                "enable_defer": "true",
-                "defer_recheck_min": "5",
-                "defer_recheck_max": "10",
-                "adaptive_step": "0.25",
-                "adaptive_max_mult": "2.0",
-            },
-            "mission_age": {"min_age_seconds": "60"},
-            "priority": {"keywords": ""},
-            "transport_prefs": {
-                "max_hospital_km": "25",
-                "max_hospital_tax_pct": "20",
-                "hospital_fallback": "wait",
-                "hospital_recheck_min": "10",
-                "max_prison_km": "25",
-                "max_prison_tax_pct": "20",
-                "prison_fallback": "wait",
-                "prison_recheck_min": "10",
-                "min_free_beds": "1",
-                "min_free_cells": "1",
-                "blacklist_ttl_min": "45",
-            },
-            "backoff": {
-                "enable": "true",
-                "timeout_threshold_seconds": "8",
-                "factor_step": "0.25",
-                "factor_max": "2.0",
-                "cool_down_good_seconds": "120",
-            },
-            "dispatch": {
-                "ambulance_only": "false",
-            },
-            "control": {
-                "command_file": "commands.txt",
-            },
-            "update": {"repo": "HGFantasy/MscBot"},
-            "agents": {
-                "enabled": "",
-                "disabled": "",
-            },
-        }
-    )
+DEFAULT_CONFIG: dict[str, dict[str, Any]] = {
+    "credentials": {"username": "", "password": ""},
+    "browser_settings": {
+        "headless": "false",
+        "browsers": "2",
+        "slow_mo_ms": "350",
+    },
+    "delays": {"missions": "10", "transport": "180"},
+    "human": {
+        "preset": "normal",  # chill | normal | sweaty
+        "short_break_prob": "0.06",
+        "short_break_range": "15-45",
+        "medium_break_prob": "0.03",
+        "medium_break_range": "120-360",
+        "long_break_prob": "0.008",
+        "long_break_range": "900-1800",
+        "quiet_hours": "02:00-06:30",
+        "idle_after_page": "0.8-2.2",
+        "page_min_dwell": "1.8-3.0",
+    },
+    "dispatch_filter": {
+        "enable_eta_filter": "true",
+        "max_eta_minutes": "25",
+        "max_distance_km": "25",
+        "max_per_mission": "6",
+        "enable_defer": "true",
+        "defer_recheck_min": "5",
+        "defer_recheck_max": "10",
+        "adaptive_step": "0.25",
+        "adaptive_max_mult": "2.0",
+    },
+    "mission_age": {"min_age_seconds": "60"},
+    "priority": {"keywords": ""},
+    "transport_prefs": {
+        "max_hospital_km": "25",
+        "max_hospital_tax_pct": "20",
+        "hospital_fallback": "wait",
+        "hospital_recheck_min": "10",
+        "max_prison_km": "25",
+        "max_prison_tax_pct": "20",
+        "prison_fallback": "wait",
+        "prison_recheck_min": "10",
+        "min_free_beds": "1",
+        "min_free_cells": "1",
+        "blacklist_ttl_min": "45",
+    },
+    "backoff": {
+        "enable": "true",
+        "timeout_threshold_seconds": "8",
+        "factor_step": "0.25",
+        "factor_max": "2.0",
+        "cool_down_good_seconds": "120",
+    },
+    "dispatch": {
+        "ambulance_only": "false",
+    },
+    "control": {
+        "command_file": "commands.txt",
+    },
+    "update": {"repo": "HGFantasy/MscBot"},
+    "agents": {
+        "enabled": "",
+        "disabled": "",
+    },
+}
 
 
-def _get(s, k, d=""):
+def _load_config() -> None:
+    """Load configuration from TOML or INI with defaults."""
+
+    global config
+    if TOML_PATH.exists():
+        with TOML_PATH.open("rb") as f:
+            cfg = tomllib.load(f)
+        for section, options in DEFAULT_CONFIG.items():
+            cfg.setdefault(section, {})
+            for key, val in options.items():
+                cfg[section].setdefault(key, val)
+        config = cfg
+    else:
+        parser = configparser.ConfigParser()
+        parser.read_dict(DEFAULT_CONFIG)
+        if INI_PATH.exists():
+            parser.read(INI_PATH, encoding="utf-8")
+        config = parser
+
+
+_load_config()
+
+
+def _get(section: str, key: str, default: str = "") -> str:
     try:
-        return config.get(s, k)
+        if isinstance(config, configparser.ConfigParser):
+            return config.get(section, key)
+        return str(config.get(section, {}).get(key, default))
     except Exception:
-        return d
+        return default
 
 
-def _getint(s, k, d):
+def _getint(section: str, key: str, default: int) -> int:
     try:
-        return config.getint(s, k)
+        if isinstance(config, configparser.ConfigParser):
+            return config.getint(section, key)
+        return int(config.get(section, {}).get(key, default))
     except Exception:
-        return d
+        return default
 
 
-def _getfloat(s, k, d):
+def _getfloat(section: str, key: str, default: float) -> float:
     try:
-        return config.getfloat(s, k)
+        if isinstance(config, configparser.ConfigParser):
+            return config.getfloat(section, key)
+        return float(config.get(section, {}).get(key, default))
     except Exception:
-        return d
+        return default
 
 
-def _getbool(s, k, d):
+def _getbool(section: str, key: str, default: bool) -> bool:
     try:
-        return config.getboolean(s, k)
+        if isinstance(config, configparser.ConfigParser):
+            return config.getboolean(section, key)
+        raw = config.get(section, {}).get(key, default)
+        if isinstance(raw, bool):
+            return raw
+        return str(raw).lower() in {"1", "true", "yes", "on"}
     except Exception:
-        return d
+        return default
 
 
 _CACHED_FUNCS = []
@@ -291,6 +325,5 @@ def clear_cache() -> None:
 
 def reload_config() -> None:
     """Reload configuration from disk for hot-reload agents."""
-    if CONFIG_PATH.exists():
-        config.read(CONFIG_PATH, encoding="utf-8")
-        clear_cache()
+    _load_config()
+    clear_cache()

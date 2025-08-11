@@ -16,7 +16,7 @@ Maintainer: **HGFantasy** — License: **MIT**
 ## Quickstart (Windows PowerShell)
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-py -3.14 -m venv .venv
+py -3.11 -m venv .venv  # or 3.12/3.13/3.14
 .\.venv\Scripts\Activate.ps1
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe -m playwright install
@@ -24,8 +24,8 @@ $env:PYTHONUNBUFFERED="1"
 .\.venv\Scripts\python.exe -u -X dev Main.py
 ```
 
-Configuration lives in `config.ini`; adjust settings as needed. Environment
+Configuration lives in `config.ini` or `config.toml`; adjust settings as needed. Environment
 variables may also be placed in a `.env` file.
-See `config.sample.ini` for configuration options. Copy it to `config.ini` and edit.
+See `config.sample.ini` for INI configuration options. Copy it to `config.ini` or convert it to TOML (`config.toml`) and edit.
 
 For details on writing your own agents, check [agents/README.md](agents/README.md).
