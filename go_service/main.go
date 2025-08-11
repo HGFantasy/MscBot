@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 // fib computes the nth Fibonacci number iteratively.
@@ -32,8 +33,41 @@ func fibHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
+// priorityScore assigns points based on mission title keywords.
+func priorityScore(name string) int {
+	n := strings.ToLower(name)
+	keywords := map[string]int{
+		"major":      8,
+		"mass":       8,
+		"large":      6,
+		"multiple":   5,
+		"high-rise":  5,
+		"industrial": 4,
+		"chemical":   4,
+		"airport":    4,
+		"brush":      3,
+		"wildfire":   5,
+	}
+	score := 0
+	for kw, pts := range keywords {
+		if strings.Contains(n, kw) {
+			score += pts
+		}
+	}
+	return score
+}
+
+func scoreHandler(w http.ResponseWriter, r *http.Request) {
+	name := r.URL.Query().Get("name")
+	score := priorityScore(name)
+	resp := map[string]int{"score": score}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
 func main() {
 	http.HandleFunc("/fib", fibHandler)
+	http.HandleFunc("/score", scoreHandler)
 	log.Println("Go service listening on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

@@ -16,6 +16,7 @@ from utils.metrics import inc, maybe_write
 from utils import sentinel
 from agents.loader import get_agent, emit
 from agents.defer import DeferredMission
+from utils.orchestrator_client import get_priority_score
 from data.config_settings import (
     get_eta_filter,
     get_min_mission_age_seconds,
@@ -102,24 +103,27 @@ def _cleanup_ttl(d: Dict[str, int], ttl: int) -> Dict[str, int]:
 
 def _priority_score(name: str) -> int:
     """Option #3: score by mission value/size using keywords in the title."""
-    n = (name or "").lower()
-    score = 0
-    # example cues (tweak freely)
-    for kw, pts in [
-        ("major", 8),
-        ("mass", 8),
-        ("large", 6),
-        ("multiple", 5),
-        ("high-rise", 5),
-        ("industrial", 4),
-        ("chemical", 4),
-        ("airport", 4),
-        ("brush", 3),
-        ("wildfire", 5),
-    ]:
-        if kw in n:
-            score += pts
-    return score
+    try:
+        return get_priority_score(name)
+    except Exception:
+        n = (name or "").lower()
+        score = 0
+        # example cues (tweak freely)
+        for kw, pts in [
+            ("major", 8),
+            ("mass", 8),
+            ("large", 6),
+            ("multiple", 5),
+            ("high-rise", 5),
+            ("industrial", 4),
+            ("chemical", 4),
+            ("airport", 4),
+            ("brush", 3),
+            ("wildfire", 5),
+        ]:
+            if kw in n:
+                score += pts
+        return score
 
 
 def _classify_type(text: str) -> str | None:
