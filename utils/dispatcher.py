@@ -59,9 +59,8 @@ _TYPE_PATTERNS = {
     for typ, kws in TYPE_KEYWORDS.items()
 }
 
-# Soft cap per type (simultaneous dispatches). Tracked by TTL so it decays naturally.
+# Soft cap per type (simultaneous dispatches).
 # Tweak via ENV like: MCX_SOFTCAP_LADDER=2
-SOFT_CAP_TTL_S = 10 * 60
 DEFAULT_SOFT_CAPS = {
     "ladder": int(os.getenv("MCX_SOFTCAP_LADDER", "2")),
     "hazmat": int(os.getenv("MCX_SOFTCAP_HAZMAT", "1")),
@@ -93,11 +92,6 @@ def _save_json(p: Path, d: Dict[str, Any]) -> None:
             json.dump(d, f, indent=2)
     except Exception as e:
         display_error(f"Could not save {p.name}: {e}")
-
-
-def _cleanup_ttl(d: Dict[str, int], ttl: int) -> Dict[str, int]:
-    now = int(time.time())
-    return {k: v for k, v in d.items() if int(v) > now - ttl}
 
 
 def _priority_score(name: str) -> int:
