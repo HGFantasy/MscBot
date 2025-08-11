@@ -283,9 +283,14 @@ def get_disabled_agents():
     return [x.strip() for x in raw.split(",") if x.strip()]
 
 
+def clear_cache() -> None:
+    """Clear cached config getter functions."""
+    for f in _CACHED_FUNCS:
+        f.cache_clear()
+
+
 def reload_config() -> None:
     """Reload configuration from disk for hot-reload agents."""
     if CONFIG_PATH.exists():
         config.read(CONFIG_PATH, encoding="utf-8")
-        for f in _CACHED_FUNCS:
-            f.cache_clear()
+        clear_cache()
