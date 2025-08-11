@@ -7,13 +7,12 @@ blacklists to ensure a clean start next run.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 from utils.pretty_print import display_info
 
 from .base import BaseAgent
-
 
 EPHEMERAL_FILES: tuple[str, ...] = (
     "data/deferred_missions.json",
@@ -45,4 +44,3 @@ class CleanupAgent(BaseAgent):
         display_info("CleanupAgent: clearing ephemeral data files…")
         _reset_json_files(EPHEMERAL_FILES)
         display_info("CleanupAgent: done.")
-

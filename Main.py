@@ -15,11 +15,11 @@ from data.config_settings import (
     get_headless,
     get_mission_delay,
     get_password,
+    get_politeness,
     get_threads,
     get_transport_delay,
     get_transport_prefs,
     get_username,
-    get_politeness,
 )
 from setup.login import launch_with_state, login_and_save_state
 from utils.browser import close_browsers
