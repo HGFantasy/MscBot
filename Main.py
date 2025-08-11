@@ -6,7 +6,6 @@ import asyncio
 from pathlib import Path
 
 from dotenv import load_dotenv
-from playwright.async_api import async_playwright
 
 from agents import emit, load_agents
 from agents.auto_update import AutoUpdateAgent
@@ -124,41 +123,40 @@ async def main():
     state_path = Path("auth") / "storage.json"
     state_path.parent.mkdir(parents=True, exist_ok=True)
 
-    async with async_playwright() as p:
-        if not state_path.exists():
-            ok = await login_and_save_state(username, password, headless, p, state_path=state_path)
-            if not ok:
-                display_error("Login-once failed; cannot continue.")
-                return
-
-        try:
-            polite = get_politeness()
-            set_max_concurrency(int(polite.get("max_concurrency", threads)))
-        except Exception:
-            set_max_concurrency(max(1, int(threads)))
-
-        display_info(f"Launching {threads} authenticated browsers…")
-        launchers = [launch_with_state(headless, p, state_path) for _ in range(threads)]
-        browsers = await asyncio.gather(*launchers)
-        if len(browsers) < 2:
-            display_error("Unexpected: <2 browsers after launch_with_state.")
-            for b in browsers:
-                try:
-                    await b.close()
-                except Exception:
-                    pass
+    if not state_path.exists():
+        ok = await login_and_save_state(username, password, headless, state_path=state_path)
+        if not ok:
+            display_error("Login-once failed; cannot continue.")
             return
 
-        browser_for_transport, browsers_for_missions = browsers[0], browsers[1:]
-        display_info("Launching mission/transport tasks…")
-        mission_task = asyncio.create_task(mission_logic(browsers_for_missions))
-        transport_task = asyncio.create_task(transport_logic(browser_for_transport))
-        try:
-            await asyncio.gather(mission_task, transport_task)
-        finally:
-            display_info("Shutting down browsers…")
-            await close_browsers(browsers)
-            await emit("shutdown")
+    try:
+        polite = get_politeness()
+        set_max_concurrency(int(polite.get("max_concurrency", threads)))
+    except Exception:
+        set_max_concurrency(max(1, int(threads)))
+
+    display_info(f"Launching {threads} authenticated sessions…")
+    launchers = [launch_with_state(headless, state_path=state_path) for _ in range(threads)]
+    browsers = await asyncio.gather(*launchers)
+    if len(browsers) < 2:
+        display_error("Unexpected: <2 sessions after launch_with_state.")
+        for b in browsers:
+            try:
+                await asyncio.to_thread(getattr(b, "close", lambda: None))
+            except Exception:
+                pass
+        return
+
+    browser_for_transport, browsers_for_missions = browsers[0], browsers[1:]
+    display_info("Launching mission/transport tasks…")
+    mission_task = asyncio.create_task(mission_logic(browsers_for_missions))
+    transport_task = asyncio.create_task(transport_logic(browser_for_transport))
+    try:
+        await asyncio.gather(mission_task, transport_task)
+    finally:
+        display_info("Shutting down sessions…")
+        await close_browsers(browsers)
+        await emit("shutdown")
 
 
 async def bootstrap() -> None:

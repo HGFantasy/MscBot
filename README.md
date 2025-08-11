@@ -21,10 +21,9 @@ Maintainer: **HGFantasy** — License: **MIT**
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 py -3.13 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -m playwright install
-$env:PYTHONUNBUFFERED="1"
-.\.venv\Scripts\python.exe -u -X dev Main.py
+ .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+ $env:PYTHONUNBUFFERED="1"
+ .\.venv\Scripts\python.exe -u -X dev Main.py
 ```
 
 Configuration lives in `config.ini`; adjust settings as needed. Environment
