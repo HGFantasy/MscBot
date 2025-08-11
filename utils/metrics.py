@@ -3,14 +3,17 @@
 # License: MIT
 
 from __future__ import annotations
-import json, time
+
+import json
+import time
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
+
 from utils.pretty_print import display_info, display_error
 
 METRICS_PATH = Path("logs/metrics.json")
-WRITE_INTERVAL_SEC = 60        # ~once a minute
-HEARTBEAT_INTERVAL_SEC = 90    # console health ping
+WRITE_INTERVAL_SEC = 60  # ~once a minute
+HEARTBEAT_INTERVAL_SEC = 90  # console health ping
 
 # In-memory counters
 _COUNTERS: Dict[str, int] = {
@@ -30,6 +33,7 @@ _COUNTERS: Dict[str, int] = {
 _LAST_WRITE_TS = 0
 _LAST_HEARTBEAT_TS = 0
 
+
 def _load_existing() -> Dict[str, Any]:
     try:
         if METRICS_PATH.exists():
@@ -43,25 +47,30 @@ def _load_existing() -> Dict[str, Any]:
         pass
     return {}
 
+
 def inc(name: str, n: int = 1) -> None:
     global _COUNTERS
     _COUNTERS[name] = int(_COUNTERS.get(name, 0)) + int(n)
     _COUNTERS["updated"] = int(time.time())
+
 
 def set_value(name: str, value: int) -> None:
     global _COUNTERS
     _COUNTERS[name] = int(value)
     _COUNTERS["updated"] = int(time.time())
 
+
 def snapshot() -> Dict[str, Any]:
     s = dict(_COUNTERS)
     s["updated"] = int(time.time())
     return s
 
+
 def _write_now() -> None:
     METRICS_PATH.parent.mkdir(parents=True, exist_ok=True)
     with METRICS_PATH.open("w", encoding="utf-8") as f:
         json.dump(snapshot(), f, ensure_ascii=False, indent=2)
+
 
 def maybe_write(force: bool = False) -> None:
     """

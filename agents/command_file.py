@@ -1,18 +1,14 @@
 """Agent to execute commands from a file at runtime."""
+
 from __future__ import annotations
 
 from pathlib import Path
 
-from data.config_settings import get_command_file
-from utils.pretty_print import display_info, display_error
-
-from .base import BaseAgent
-from .loader import enable_agent, disable_agent, emit
 from data.config_settings import get_command_file, reload_config
 from utils.pretty_print import display_info, display_error
 
 from .base import BaseAgent
-from .loader import enable_agent, disable_agent
+from .loader import enable_agent, disable_agent, emit
 
 
 class CommandFileAgent(BaseAgent):
@@ -34,7 +30,11 @@ class CommandFileAgent(BaseAgent):
         if not self._path.exists():
             return
         try:
-            lines = [l.strip().lower() for l in self._path.read_text(encoding="utf-8").splitlines() if l.strip()]
+            lines = [
+                line.strip().lower()
+                for line in self._path.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
             self._path.unlink()
         except Exception as e:
             display_error(f"CommandFileAgent read failed: {e}")
