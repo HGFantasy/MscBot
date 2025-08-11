@@ -4,12 +4,14 @@ Maintainer: **HGFantasy** — License: **MIT**
 ## Highlights
 - Agent-based architecture with an inter-agent event bus for runtime coordination.
 - Command-file and dynamic-config agents enable hot reloads and runtime controls.
-- Cache clearing agent purges cached configuration values and data caches periodically.
+- Cache clearing agent purges cached configuration values and mission/transport caches periodically.
 - HumanAgent delivers adaptive human-like pacing; missions can be deferred and agents toggled on the fly.
 - GitHub update alerts, metrics summaries, and ambulance-only dispatch mode.
+- Update check tracks main repository commits and auto-updates by pulling new files and restarting automatically.
 - Cached config getters and precompiled mission-type checks for smoother performance.
 - Environment variables can be loaded from a `.env` file.
 - Browsers launch concurrently for faster startup.
+- Simplified configuration validation for clarity.
 
 ## Quickstart (Windows PowerShell)
 ```powershell
