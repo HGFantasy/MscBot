@@ -11,11 +11,9 @@ by editing ``BASE_OPTIONS`` below.
 
 from __future__ import annotations
 
-from typing import Dict, List
-
 # Canonical mapping.  Keys may contain multiple aliases separated by commas or
 # "or" which will be expanded into ``VEHICLE_OPTIONS`` at import time.
-BASE_OPTIONS: Dict[str, List[str]] = {
+BASE_OPTIONS: dict[str, list[str]] = {
     "arffs or firetruck": [
         "Type 1 fire engine",
         "Type 2 fire engine",
@@ -24,7 +22,12 @@ BASE_OPTIONS: Dict[str, List[str]] = {
         "Large ARFF Crash Tender",
     ],
     "firetruck": ["Type 1 fire engine", "Type 2 fire engine", "Type 3 fire engine"],
-    "firetrucks or platform truck": ["Type 1 fire engine", "Type 2 fire engine", "Platform truck", "Quint"],
+    "firetrucks or platform truck": [
+        "Type 1 fire engine",
+        "Type 2 fire engine",
+        "Platform truck",
+        "Quint",
+    ],
     "firetrucks, heavy rescue vehicles or platform truck": [
         "Type 1 fire engine",
         "Type 2 fire engine",
@@ -44,7 +47,11 @@ BASE_OPTIONS: Dict[str, List[str]] = {
     "hazmat": ["HazMat"],
     "mobile command vehicle": ["MCV"],
     "fire investigation unit": ["Fire Investigator Unit"],
-    "arff": ["Small ARFF Crash Tender", "Medium ARFF Crash Tender", "Large ARFF Crash Tender"],
+    "arff": [
+        "Small ARFF Crash Tender",
+        "Medium ARFF Crash Tender",
+        "Large ARFF Crash Tender",
+    ],
     "ambulance": ["ALS Ambulance", "BLS Ambulance"],
     "battalion chief unit": ["EMS Chief"],
     "ems chief": ["EMS Chief"],
@@ -56,16 +63,31 @@ BASE_OPTIONS: Dict[str, List[str]] = {
     "police helicopter": ["Police helicopter"],
     "fbi investigation wagon": ["FBI Investigation Wagon"],
     "fbi bomb technician vehicle": ["FBI Bomb Technician Vehicle"],
-    "fbi drones or fbi investigation wagon": ["FBI Investigation Wagon", "FBI Surveillance Drone"],
+    "fbi drones or fbi investigation wagon": [
+        "FBI Investigation Wagon",
+        "FBI Surveillance Drone",
+    ],
     "riot police unit": ["Riot Police Van", "Riot Police Bus"],
     "warden truck": ["Warden's Truck"],
     "police cars or swat suv": ["Patrol car", "SWAT SUV"],
-    "wildland fire engine": ["Type 3 engine", "Type 4 engine", "Type 5 engine", "Type 6 engine", "Type 7 engine"],
-    "wildland fire vehicle": ["Type 3 engine", "Type 4 engine", "Type 5 engine", "Type 6 engine", "Type 7 engine"],
+    "wildland fire engine": [
+        "Type 3 engine",
+        "Type 4 engine",
+        "Type 5 engine",
+        "Type 6 engine",
+        "Type 7 engine",
+    ],
+    "wildland fire vehicle": [
+        "Type 3 engine",
+        "Type 4 engine",
+        "Type 5 engine",
+        "Type 6 engine",
+        "Type 7 engine",
+    ],
 }
 
 # Expanded lookup map with individual aliases.
-VEHICLE_OPTIONS: Dict[str, List[str]] = {}
+VEHICLE_OPTIONS: dict[str, list[str]] = {}
 for key, opts in BASE_OPTIONS.items():
     parts = []
     for token in key.split(","):
@@ -74,7 +96,7 @@ for key, opts in BASE_OPTIONS.items():
         VEHICLE_OPTIONS[alias.lower()] = opts
 
 
-def get_vehicle_options(vehicle_type: str) -> List[str]:
+def get_vehicle_options(vehicle_type: str) -> list[str]:
     """Return recognised vehicle captions for ``vehicle_type``.
 
     Lookup is case-insensitive; an empty list is returned for unknown types.
@@ -84,4 +106,3 @@ def get_vehicle_options(vehicle_type: str) -> List[str]:
 
 
 __all__ = ["get_vehicle_options"]
-

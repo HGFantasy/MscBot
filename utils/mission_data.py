@@ -4,16 +4,21 @@
 # License: MIT
 
 from __future__ import annotations
-import json, re, time
+
+import json
+import re
+import time
 from pathlib import Path
-from typing import Dict, Any
-from utils.pretty_print import display_info, display_error
-from utils.politeness import goto_safe, ensure_settled
+from typing import Any
+
+from utils.politeness import ensure_settled, goto_safe
+from utils.pretty_print import display_error, display_info
 
 SNAPSHOT_PATH = Path("data/mission_data.json")
 MISSION_HREF_RE = re.compile(r"/missions/(\d+)")
 
-def _read_existing() -> Dict[str, Any]:
+
+def _read_existing() -> dict[str, Any]:
     try:
         if SNAPSHOT_PATH.exists():
             with SNAPSHOT_PATH.open("r", encoding="utf-8") as f:
@@ -22,10 +27,12 @@ def _read_existing() -> Dict[str, Any]:
         pass
     return {}
 
-def read_snapshot() -> Dict[str, Any]:
+
+def read_snapshot() -> dict[str, Any]:
     return _read_existing()
 
-def _merge_preserving_seen_ts(snapshot: Dict[str, Any]) -> Dict[str, Any]:
+
+def _merge_preserving_seen_ts(snapshot: dict[str, Any]) -> dict[str, Any]:
     """
     Merge incoming snapshot with existing file, keeping the earliest seen_ts per mission.
     """
@@ -55,7 +62,8 @@ def _merge_preserving_seen_ts(snapshot: Dict[str, Any]) -> Dict[str, Any]:
 
     return snapshot
 
-def write_snapshot(snapshot: Dict[str, Any]) -> None:
+
+def write_snapshot(snapshot: dict[str, Any]) -> None:
     """
     Write mission snapshot to disk, preserving earliest seen_ts across rewrites.
     If nothing changed since last write, skip the write to reduce churn.
@@ -78,7 +86,8 @@ def write_snapshot(snapshot: Dict[str, Any]) -> None:
         json.dump(snapshot, f, ensure_ascii=False, indent=2)
     display_info(f"Wrote mission_data.json with {len(snapshot)} missions.")
 
-async def _collect_from_page(page) -> Dict[str, Any]:
+
+async def _collect_from_page(page) -> dict[str, Any]:
     """
     Collect missions from the home page by scanning anchors like /missions/<id>.
     """
@@ -91,7 +100,7 @@ async def _collect_from_page(page) -> Dict[str, Any]:
 
     anchors = page.locator('a[href^="/missions/"]')
     count = await anchors.count()
-    snapshot: Dict[str, Any] = {}
+    snapshot: dict[str, Any] = {}
     now = int(time.time())
 
     for i in range(count):
@@ -114,6 +123,7 @@ async def _collect_from_page(page) -> Dict[str, Any]:
             continue
 
     return snapshot
+
 
 async def check_and_grab_missions(*args, **kwargs) -> None:
     """
@@ -141,7 +151,9 @@ async def check_and_grab_missions(*args, **kwargs) -> None:
     if page is not None:
         collected = await _collect_from_page(page)
         if not collected:
-            display_info("mission snapshot: no missions found on page; preserving existing snapshot.")
+            display_info(
+                "mission snapshot: no missions found on page; preserving existing snapshot."
+            )
             collected = _read_existing()
         try:
             write_snapshot(collected)

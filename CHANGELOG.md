@@ -1,12 +1,15 @@
 # Changelog
 
-## Unreleased
+## 2025-08-11 — v2.1.0
 
-- Load environment variables from a `.env` file at startup.
-- Launch authenticated browsers concurrently for faster startup.
-- Simplified configuration validation for clarity.
-- Updated documentation and licensing.
-- Auto-update promoted to a main agent with configurable branch, interval, and safer pulls.
+- Transport: refactored into a `TransportManager` with clearer flow and helpers.
+- Transport: added env var overrides for all tuning (SLA, defers, attempt budget, caps).
+- Politeness: made concurrency, retry, selector timeouts, and jitters configurable via env.
+  - Added HumanAgent-aware scaling via `MISSIONCHIEF_POLITE_HUMAN_SCALE` to avoid stacked delays.
+- Packaging: added `__init__.py` in packages; centralized Black/Ruff config via `pyproject.toml`.
+- Tests: added basic smoke tests for config and agent loader.
+- Main: safer entrypoint error handling and KeyboardInterrupt support.
+- Docs: expanded README with development workflow and transport env vars.
 
 ## 2025-08-10 — v2.0
 

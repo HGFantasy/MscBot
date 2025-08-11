@@ -5,8 +5,8 @@ import json
 import os
 from typing import Any
 
-from utils.pretty_print import display_info, display_error
-from utils.politeness import goto_safe, ensure_settled
+from utils.politeness import ensure_settled, goto_safe
+from utils.pretty_print import display_error, display_info
 
 
 async def gather_building_data(browsers, count) -> None:

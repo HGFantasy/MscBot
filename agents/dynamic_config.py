@@ -1,7 +1,6 @@
 """Agent that hot-reloads config.ini when it changes."""
-from __future__ import annotations
 
-from typing import Optional
+from __future__ import annotations
 
 from data.config_settings import CONFIG_PATH, reload_config
 from utils.pretty_print import display_error, display_info
@@ -12,7 +11,7 @@ from .loader import emit
 
 class DynamicConfigAgent(BaseAgent):
     def __init__(self) -> None:
-        self._last_mtime: Optional[float] = None
+        self._last_mtime: float | None = None
 
     async def on_start(self, **_: dict) -> None:
         if CONFIG_PATH.exists():
@@ -48,4 +47,3 @@ class DynamicConfigAgent(BaseAgent):
                 await emit("config_reloaded")
             except Exception as e:
                 display_error(f"DynamicConfigAgent reload failed: {e}")
-

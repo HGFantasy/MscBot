@@ -1,4 +1,5 @@
 """Agent that prints metrics summary at shutdown."""
+
 from __future__ import annotations
 
 from utils.metrics import snapshot

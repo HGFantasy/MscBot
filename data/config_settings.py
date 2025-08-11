@@ -4,8 +4,8 @@
 
 import configparser
 import os
-from pathlib import Path
 from functools import lru_cache
+from pathlib import Path
 
 THIS_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = THIS_DIR.parent
@@ -61,6 +61,10 @@ else:
                 "min_free_beds": "1",
                 "min_free_cells": "1",
                 "blacklist_ttl_min": "45",
+                "attempt_budget": "2",
+                "escalate_after_defers": "3",
+                "sla_hospital_min": "15",
+                "sla_prison_min": "20",
             },
             "backoff": {
                 "enable": "true",
@@ -79,6 +83,20 @@ else:
             "agents": {
                 "enabled": "",
                 "disabled": "",
+                "handler_timeout_ms": "5000",
+            },
+            "politeness": {
+                "max_concurrency": "2",
+                "retry_attempts": "3",
+                "retry_base_delay": "0.4",
+                "selector_timeout_ms": "12000",
+                "gate_entry_base": "0.15",
+                "gate_entry_spread": "0.35",
+                "gate_exit_base": "0.10",
+                "gate_exit_spread": "0.25",
+                "goto_dwell_base": "0.3",
+                "goto_dwell_spread": "0.5",
+                "human_scale": "0.6",
             },
         }
     )
@@ -110,6 +128,37 @@ def _getbool(s, k, d):
         return config.getboolean(s, k)
     except Exception:
         return d
+
+
+def _envstr(k: str) -> str | None:
+    v = os.getenv(k)
+    if v is None:
+        return None
+    v = v.strip()
+    return v if v != "" else None
+
+
+def _envint(k: str, d: int) -> int:
+    try:
+        v = _envstr(k)
+        return int(v) if v is not None else d
+    except Exception:
+        return d
+
+
+def _envfloat(k: str, d: float) -> float:
+    try:
+        v = _envstr(k)
+        return float(v) if v is not None else d
+    except Exception:
+        return d
+
+
+def _envbool(k: str, d: bool) -> bool:
+    v = _envstr(k)
+    if v is None:
+        return d
+    return v.lower() in {"1", "true", "yes", "y", "on"}
 
 
 _CACHED_FUNCS = []
@@ -247,20 +296,59 @@ def get_global_active_windows():
 
 @_cache
 def get_transport_prefs():
+    # Defaults from config, then allow environment variable overrides
+    cfg_max_h_km = _getfloat("transport_prefs", "max_hospital_km", 25.0)
+    cfg_max_h_pct = _getfloat("transport_prefs", "max_hospital_tax_pct", 20.0)
+    cfg_h_fb = _get("transport_prefs", "hospital_fallback", "wait")
+    cfg_h_re = _getint("transport_prefs", "hospital_recheck_min", 10)
+    cfg_max_p_km = _getfloat("transport_prefs", "max_prison_km", 25.0)
+    cfg_max_p_pct = _getfloat("transport_prefs", "max_prison_tax_pct", 20.0)
+    cfg_p_fb = _get("transport_prefs", "prison_fallback", "wait")
+    cfg_p_re = _getint("transport_prefs", "prison_recheck_min", 10)
+    cfg_min_beds = _getint("transport_prefs", "min_free_beds", 1)
+    cfg_min_cells = _getint("transport_prefs", "min_free_cells", 1)
+    cfg_ttl = _getint("transport_prefs", "blacklist_ttl_min", 45)
+    cfg_attempt = _getint("transport_prefs", "attempt_budget", 2)
+    cfg_escalate = _getint("transport_prefs", "escalate_after_defers", 3)
+    cfg_sla_h = _getint("transport_prefs", "sla_hospital_min", 15)
+    cfg_sla_p = _getint("transport_prefs", "sla_prison_min", 20)
+
+    # Environment overrides
+    max_hospital_km = _envfloat("MISSIONCHIEF_TRANSPORT_MAX_HOSPITAL_KM", cfg_max_h_km)
+    max_hospital_tax_pct = _envfloat("MISSIONCHIEF_TRANSPORT_MAX_HOSPITAL_TAX_PCT", cfg_max_h_pct)
+    hospital_fallback = _envstr("MISSIONCHIEF_TRANSPORT_HOSPITAL_FALLBACK") or cfg_h_fb
+    hospital_recheck_min = _envint("MISSIONCHIEF_TRANSPORT_HOSPITAL_RECHECK_MIN", cfg_h_re)
+
+    max_prison_km = _envfloat("MISSIONCHIEF_TRANSPORT_MAX_PRISON_KM", cfg_max_p_km)
+    max_prison_tax_pct = _envfloat("MISSIONCHIEF_TRANSPORT_MAX_PRISON_TAX_PCT", cfg_max_p_pct)
+    prison_fallback = _envstr("MISSIONCHIEF_TRANSPORT_PRISON_FALLBACK") or cfg_p_fb
+    prison_recheck_min = _envint("MISSIONCHIEF_TRANSPORT_PRISON_RECHECK_MIN", cfg_p_re)
+
+    min_free_beds = _envint("MISSIONCHIEF_TRANSPORT_MIN_FREE_BEDS", cfg_min_beds)
+    min_free_cells = _envint("MISSIONCHIEF_TRANSPORT_MIN_FREE_CELLS", cfg_min_cells)
+    blacklist_ttl_min = _envint("MISSIONCHIEF_TRANSPORT_BLACKLIST_TTL_MIN", cfg_ttl)
+
+    attempt_budget = _envint("MISSIONCHIEF_TRANSPORT_ATTEMPT_BUDGET", cfg_attempt)
+    escalate_after_defers = _envint("MISSIONCHIEF_TRANSPORT_ESCALATE_AFTER_DEFERS", cfg_escalate)
+    sla_hospital_min = _envint("MISSIONCHIEF_TRANSPORT_SLA_HOSPITAL_MIN", cfg_sla_h)
+    sla_prison_min = _envint("MISSIONCHIEF_TRANSPORT_SLA_PRISON_MIN", cfg_sla_p)
+
     return {
-        "max_hospital_km": _getfloat("transport_prefs", "max_hospital_km", 25.0),
-        "max_hospital_tax_pct": _getfloat(
-            "transport_prefs", "max_hospital_tax_pct", 20.0
-        ),
-        "hospital_fallback": _get("transport_prefs", "hospital_fallback", "wait"),
-        "hospital_recheck_min": _getint("transport_prefs", "hospital_recheck_min", 10),
-        "max_prison_km": _getfloat("transport_prefs", "max_prison_km", 25.0),
-        "max_prison_tax_pct": _getfloat("transport_prefs", "max_prison_tax_pct", 20.0),
-        "prison_fallback": _get("transport_prefs", "prison_fallback", "wait"),
-        "prison_recheck_min": _getint("transport_prefs", "prison_recheck_min", 10),
-        "min_free_beds": _getint("transport_prefs", "min_free_beds", 1),
-        "min_free_cells": _getint("transport_prefs", "min_free_cells", 1),
-        "blacklist_ttl_min": _getint("transport_prefs", "blacklist_ttl_min", 45),
+        "max_hospital_km": max_hospital_km,
+        "max_hospital_tax_pct": max_hospital_tax_pct,
+        "hospital_fallback": hospital_fallback,
+        "hospital_recheck_min": hospital_recheck_min,
+        "max_prison_km": max_prison_km,
+        "max_prison_tax_pct": max_prison_tax_pct,
+        "prison_fallback": prison_fallback,
+        "prison_recheck_min": prison_recheck_min,
+        "min_free_beds": min_free_beds,
+        "min_free_cells": min_free_cells,
+        "blacklist_ttl_min": blacklist_ttl_min,
+        "attempt_budget": attempt_budget,
+        "escalate_after_defers": escalate_after_defers,
+        "sla_hospital_min": sla_hospital_min,
+        "sla_prison_min": sla_prison_min,
     }
 
 
@@ -318,3 +406,41 @@ def reload_config() -> None:
         config.read(CONFIG_PATH, encoding="utf-8")
         for f in _CACHED_FUNCS:
             f.cache_clear()
+
+
+@_cache
+def get_agent_handler_timeout_ms() -> int:
+    cfg = _getint("agents", "handler_timeout_ms", 5000)
+    return _envint("MISSIONCHIEF_AGENTS_HANDLER_TIMEOUT_MS", cfg)
+
+
+@_cache
+def get_politeness() -> dict[str, float | int | str]:
+    # Defaults from config
+    cfg = {
+        "max_concurrency": _getint("politeness", "max_concurrency", 2),
+        "retry_attempts": _getint("politeness", "retry_attempts", 3),
+        "retry_base_delay": _getfloat("politeness", "retry_base_delay", 0.4),
+        "selector_timeout_ms": _getint("politeness", "selector_timeout_ms", 12000),
+        "gate_entry_base": _getfloat("politeness", "gate_entry_base", 0.15),
+        "gate_entry_spread": _getfloat("politeness", "gate_entry_spread", 0.35),
+        "gate_exit_base": _getfloat("politeness", "gate_exit_base", 0.10),
+        "gate_exit_spread": _getfloat("politeness", "gate_exit_spread", 0.25),
+        "goto_dwell_base": _getfloat("politeness", "goto_dwell_base", 0.3),
+        "goto_dwell_spread": _getfloat("politeness", "goto_dwell_spread", 0.5),
+        "human_scale": _getfloat("politeness", "human_scale", 0.6),
+    }
+
+    # Env overrides
+    cfg["max_concurrency"] = _envint("MISSIONCHIEF_POLITE_MAX_CONCURRENCY", cfg["max_concurrency"])  # type: ignore[index]
+    cfg["retry_attempts"] = _envint("MISSIONCHIEF_POLITE_RETRY_ATTEMPTS", cfg["retry_attempts"])  # type: ignore[index]
+    cfg["retry_base_delay"] = _envfloat("MISSIONCHIEF_POLITE_RETRY_BASE_DELAY", cfg["retry_base_delay"])  # type: ignore[index]
+    cfg["selector_timeout_ms"] = _envint("MISSIONCHIEF_POLITE_SELECTOR_TIMEOUT_MS", cfg["selector_timeout_ms"])  # type: ignore[index]
+    cfg["gate_entry_base"] = _envfloat("MISSIONCHIEF_POLITE_GATE_ENTRY_BASE", cfg["gate_entry_base"])  # type: ignore[index]
+    cfg["gate_entry_spread"] = _envfloat("MISSIONCHIEF_POLITE_GATE_ENTRY_SPREAD", cfg["gate_entry_spread"])  # type: ignore[index]
+    cfg["gate_exit_base"] = _envfloat("MISSIONCHIEF_POLITE_GATE_EXIT_BASE", cfg["gate_exit_base"])  # type: ignore[index]
+    cfg["gate_exit_spread"] = _envfloat("MISSIONCHIEF_POLITE_GATE_EXIT_SPREAD", cfg["gate_exit_spread"])  # type: ignore[index]
+    cfg["goto_dwell_base"] = _envfloat("MISSIONCHIEF_POLITE_GOTO_DWELL_BASE", cfg["goto_dwell_base"])  # type: ignore[index]
+    cfg["goto_dwell_spread"] = _envfloat("MISSIONCHIEF_POLITE_GOTO_DWELL_SPREAD", cfg["goto_dwell_spread"])  # type: ignore[index]
+    cfg["human_scale"] = _envfloat("MISSIONCHIEF_POLITE_HUMAN_SCALE", cfg["human_scale"])  # type: ignore[index]
+    return cfg

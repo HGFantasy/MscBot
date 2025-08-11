@@ -1,4 +1,4 @@
-# MscBot v2.0.1
+# MscBot v2.1.0
 Maintainer: **HGFantasy** — License: **MIT**
 
 ## Highlights
@@ -9,6 +9,12 @@ Maintainer: **HGFantasy** — License: **MIT**
 - Cached config getters and precompiled mission-type checks for smoother performance.
 - Environment variables can be loaded from a `.env` file.
 - Browsers launch concurrently for faster startup.
+
+## What’s New in 2.1.0
+- Refactored transport handling into a clear `TransportManager` with SLA and deferral logic.
+- Added environment variable overrides for all transport tuning knobs.
+- Packaging hygiene (`__init__.py`), central tool config via `pyproject.toml`.
+- Added smoke tests and tightened error handling in the entrypoint.
 
 ## Quickstart (Windows PowerShell)
 ```powershell
@@ -47,3 +53,46 @@ print(get_priority_score("Major wildfire"))
 This demonstrates delegating performance-critical work to a faster language
 via a simple HTTP API. The dispatcher now relies on this Go service for
 mission priority scoring, so keep it running during normal operation.
+
+## Development
+
+- Format: `Scripts/black.exe .` (or `black .` if on PATH)
+- Lint: `Scripts/ruff.exe check .` (or `ruff check .`)
+- Tests: `py -m pytest -q`
+
+Configuration lives in `config.ini` with environment overrides:
+
+- `MISSIONCHIEF_USER` / `MISSIONCHIEF_PASS` for credentials
+- See `data/config_settings.py` for all defaults
+
+Transport-related env overrides (examples):
+
+- `MISSIONCHIEF_TRANSPORT_MAX_HOSPITAL_KM`
+- `MISSIONCHIEF_TRANSPORT_MAX_HOSPITAL_TAX_PCT`
+- `MISSIONCHIEF_TRANSPORT_HOSPITAL_FALLBACK` (e.g., `wait`)
+- `MISSIONCHIEF_TRANSPORT_HOSPITAL_RECHECK_MIN`
+- `MISSIONCHIEF_TRANSPORT_MAX_PRISON_KM`
+- `MISSIONCHIEF_TRANSPORT_MAX_PRISON_TAX_PCT`
+- `MISSIONCHIEF_TRANSPORT_PRISON_FALLBACK` (e.g., `wait`)
+- `MISSIONCHIEF_TRANSPORT_PRISON_RECHECK_MIN`
+- `MISSIONCHIEF_TRANSPORT_MIN_FREE_BEDS`
+- `MISSIONCHIEF_TRANSPORT_MIN_FREE_CELLS`
+- `MISSIONCHIEF_TRANSPORT_BLACKLIST_TTL_MIN`
+- `MISSIONCHIEF_TRANSPORT_ATTEMPT_BUDGET`
+- `MISSIONCHIEF_TRANSPORT_ESCALATE_AFTER_DEFERS`
+- `MISSIONCHIEF_TRANSPORT_SLA_HOSPITAL_MIN`
+- `MISSIONCHIEF_TRANSPORT_SLA_PRISON_MIN`
+
+Politeness-related env overrides (examples):
+
+- `MISSIONCHIEF_POLITE_MAX_CONCURRENCY`
+- `MISSIONCHIEF_POLITE_RETRY_ATTEMPTS`
+- `MISSIONCHIEF_POLITE_RETRY_BASE_DELAY`
+- `MISSIONCHIEF_POLITE_SELECTOR_TIMEOUT_MS`
+- `MISSIONCHIEF_POLITE_GATE_ENTRY_BASE`
+- `MISSIONCHIEF_POLITE_GATE_ENTRY_SPREAD`
+- `MISSIONCHIEF_POLITE_GATE_EXIT_BASE`
+- `MISSIONCHIEF_POLITE_GATE_EXIT_SPREAD`
+- `MISSIONCHIEF_POLITE_GOTO_DWELL_BASE`
+- `MISSIONCHIEF_POLITE_GOTO_DWELL_SPREAD`
+ - `MISSIONCHIEF_POLITE_HUMAN_SCALE` (scale politeness delays when HumanAgent is active)

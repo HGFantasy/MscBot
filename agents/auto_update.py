@@ -53,9 +53,7 @@ class AutoUpdateAgent(BaseAgent):
             latest = (data.get("sha") or "").strip()
             local = self._local_commit()
             if latest and local and latest != local:
-                display_info(
-                    f"Update available: {local[:7]} → {latest[:7]} (branch {branch})"
-                )
+                display_info(f"Update available: {local[:7]} → {latest[:7]} (branch {branch})")
                 if auto and self._can_update():
                     self._auto_update(repo, branch)
         except Exception as e:

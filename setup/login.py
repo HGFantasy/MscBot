@@ -2,20 +2,30 @@
 # License: MIT
 
 import os
+
 from playwright.async_api import TimeoutError as PWTimeoutError
-from utils.pretty_print import display_info, display_error
-from utils.politeness import goto_safe, fill_safe, click_safe, ensure_settled
+
 from data.config_settings import get_slow_mo_ms
+from utils.politeness import click_safe, ensure_settled, fill_safe, goto_safe
+from utils.pretty_print import display_error, display_info
+
 
 async def maybe_accept_cookies(page):
     for sel in [
-        'button:has-text("Accept")','button:has-text("I agree")',
-        '[id*="cookie"] button:has-text("Accept")','button[aria-label*="accept"]',
+        'button:has-text("Accept")',
+        'button:has-text("I agree")',
+        '[id*="cookie"] button:has-text("Accept")',
+        'button[aria-label*="accept"]',
     ]:
         try:
             btn = await page.wait_for_selector(sel, timeout=1200)
-            if btn: await btn.click(); await ensure_settled(page); return
-        except Exception: pass
+            if btn:
+                await btn.click()
+                await ensure_settled(page)
+                return
+        except Exception:
+            pass
+
 
 async def _perform_login(page, username, password):
     # Important: navigate directly (not via goto_safe) to avoid auto-repair
@@ -54,12 +64,16 @@ async def _perform_login(page, username, password):
     await ensure_settled(page)
     if "users/sign_in" in (page.url or ""):
         try:
-            if await page.locator('text=Invalid email or password').is_visible(timeout=1200):
+            if await page.locator("text=Invalid email or password").is_visible(timeout=1200):
                 raise PWTimeoutError("Invalid email or password")
-        except Exception: pass
+        except Exception:
+            pass
         raise PWTimeoutError("Login did not navigate away from sign_in")
 
-async def login_and_save_state(username, password, headless, playwright, state_path="auth/storage.json"):
+
+async def login_and_save_state(
+    username, password, headless, playwright, state_path="auth/storage.json"
+):
     display_info("Login-once: creating fresh session and saving storage_state")
     os.makedirs(os.path.dirname(state_path), exist_ok=True)
     slow_mo = get_slow_mo_ms()
@@ -77,15 +91,21 @@ async def login_and_save_state(username, password, headless, playwright, state_p
         display_info(f"Saved storage_state to {state_path}")
         return True
     except Exception as e:
-        display_error(f"Login-once failed: {e}"); return False
+        display_error(f"Login-once failed: {e}")
+        return False
     finally:
-        try: await browser.close()
-        except Exception: pass
+        try:
+            await browser.close()
+        except Exception:
+            pass
+
 
 async def launch_with_state(headless, playwright, state_path="auth/storage.json"):
     slow_mo = get_slow_mo_ms()
     browser = await playwright.chromium.launch(headless=headless, devtools=False, slow_mo=slow_mo)
-    context = await browser.new_context(storage_state=state_path if os.path.exists(state_path) else None)
+    context = await browser.new_context(
+        storage_state=state_path if os.path.exists(state_path) else None
+    )
     page = await context.new_page()
     await goto_safe(page, "https://www.missionchief.com/")
     await ensure_settled(page)

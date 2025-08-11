@@ -5,7 +5,7 @@ Utilities for working with Playwright browser instances.
 from __future__ import annotations
 
 import asyncio
-from typing import Iterable
+from collections.abc import Iterable
 
 from utils.pretty_print import display_error, display_info
 

@@ -1,8 +1,10 @@
-
 # Project: MscBot
 # License: MIT
 
-import asyncio, random, datetime as dt
+import asyncio
+import datetime as dt
+import random
+
 from data.config_settings import get_human
 
 
@@ -28,25 +30,26 @@ def _in_quiet(hours: str) -> bool:
     except Exception:
         return False
 
+
 async def gentle_mouse(page):
     try:
-        box = await page.evaluate("""
+        box = await page.evaluate(
+            """
             () => { return { w: window.innerWidth, h: window.innerHeight }; }
-        """)
-        x = random.randint(0, max(1, int(box["w"]*0.9)))
-        y = random.randint(0, max(1, int(box["h"]*0.9)))
+        """
+        )
+        x = random.randint(0, max(1, int(box["w"] * 0.9)))
+        y = random.randint(0, max(1, int(box["h"] * 0.9)))
         await page.mouse.move(x, y)
     except Exception:
         pass
+
 
 class Humanizer:
     """Adaptive pacing model for more realistic human behaviour."""
 
     def __init__(self, **cfg):
         self.actions = 0
-    """Simulate human pacing with configurable idles and breaks."""
-
-    def __init__(self, **cfg):
         self.update_config(cfg or get_human())
 
     def update_config(self, cfg: dict) -> None:
@@ -63,9 +66,18 @@ class Humanizer:
         self.quiet_hours = cfg.get("quiet_hours", "02:00-06:30")
         self.quiet_mult = float(cfg.get("quiet_mult", 2.0))
         self.break_profiles = [
-            (float(cfg.get("long_prob", 0.008)), _parse_range(cfg.get("long_range", "900-1800"), (900, 1800))),
-            (float(cfg.get("medium_prob", 0.03)), _parse_range(cfg.get("medium_range", "120-360"), (120, 360))),
-            (float(cfg.get("short_prob", 0.06)), _parse_range(cfg.get("short_range", "15-45"), (15, 45))),
+            (
+                float(cfg.get("long_prob", 0.008)),
+                _parse_range(cfg.get("long_range", "900-1800"), (900, 1800)),
+            ),
+            (
+                float(cfg.get("medium_prob", 0.03)),
+                _parse_range(cfg.get("medium_range", "120-360"), (120, 360)),
+            ),
+            (
+                float(cfg.get("short_prob", 0.06)),
+                _parse_range(cfg.get("short_range", "15-45"), (15, 45)),
+            ),
         ]
 
     def _gauss(self, mean: float, sigma: float) -> float:
@@ -90,19 +102,3 @@ class Humanizer:
                 self.actions = 0
                 return
         self.actions += 1
-    async def idle_after_action(self) -> None:
-        """Sleep briefly after an action to mimic natural pacing."""
-        await asyncio.sleep(random.uniform(*self.idle_rng))
-
-    async def page_dwell(self) -> None:
-        """Ensure a minimum dwell time on pages after navigation."""
-        await asyncio.sleep(random.uniform(*self.dwell_rng))
-
-    async def maybe_break(self) -> None:
-        """Occasionally take short, medium, or long breaks."""
-        multiplier = self.quiet_mult if _in_quiet(self.quiet_hours) else 1.0
-        for prob, rng in self.break_profiles:
-            if random.random() < prob * multiplier:
-                lo, hi = rng
-                await asyncio.sleep(random.uniform(lo, hi))
-                return
