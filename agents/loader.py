@@ -72,15 +72,21 @@ def get_agent(name: str) -> BaseAgent | None:
     return _AGENTS.get(name.lower())
 
 
-async def emit(event: str, **kwargs: Any) -> None:
+async def emit(event: str, *, collect: bool = False, **kwargs: Any) -> Dict[str, Any]:
     """Broadcast ``event`` to all active agents.
 
     For an ``event`` named ``foo`` this will invoke an ``on_foo`` method on
     each agent if present. Agents may also implement a generic ``on_event``
     handler which receives the event name via a keyword argument.
+
+    If ``collect`` is ``True`` the return values of handlers are gathered and
+    returned in a dictionary keyed by agent name. Handlers may be regular
+    functions or coroutines. Exceptions are reported but omitted from the
+    results.
     """
 
     tasks: List[tuple[str, str, Awaitable[Any]]] = []
+    results: Dict[str, Any] = {} if collect else {}
     for name in list(_ACTIVE):
         agent = _AGENTS.get(name)
         if not agent:
@@ -96,15 +102,20 @@ async def emit(event: str, **kwargs: Any) -> None:
                     result = handler(**kwargs)
                 if inspect.isawaitable(result):
                     tasks.append((name, attr, result))
+                elif collect:
+                    results[name] = result
             except Exception as e:  # pragma: no cover - defensive
                 display_error(f"Agent {name}.{attr} failed: {e}")
     if tasks:
-        results = await asyncio.gather(
+        gathered = await asyncio.gather(
             *(t for _, _, t in tasks), return_exceptions=True
         )
-        for (name, attr, _), res in zip(tasks, results):
+        for (name, attr, _), res in zip(tasks, gathered):
             if isinstance(res, Exception):
                 display_error(f"Agent {name}.{attr} failed: {res}")
+            elif collect:
+                results[name] = res
+    return results
 
 
 def enable_agent(name: str) -> bool:
