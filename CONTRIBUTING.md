@@ -14,9 +14,8 @@ Thanks for helping improve MscBot!
    ```
 3. Install runtime dependencies:
    ```bash
-   pip install -r requirements.txt
-   python -m playwright install
-   ```
+    pip install -r requirements.txt
+    ```
 4. Configure `config.ini` or create a `.env` file with `MISSIONCHIEF_USER` and
    `MISSIONCHIEF_PASS`.
 

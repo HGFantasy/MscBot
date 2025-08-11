@@ -1,5 +1,5 @@
 """
-Utilities for working with Playwright browser instances.
+Utilities for working with browser/session instances.
 """
 
 from __future__ import annotations
@@ -21,7 +21,13 @@ async def close_browsers(browsers: Iterable) -> None:
     tasks = []
     for i, browser in enumerate(browsers, 1):
         display_info(f"Closing browser {i}")
-        tasks.append(browser.close())
+        close = getattr(browser, "close", None)
+        if close is None:
+            continue
+        if asyncio.iscoroutinefunction(close):
+            tasks.append(close())
+        else:
+            tasks.append(asyncio.to_thread(close))
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
     for i, result in enumerate(results, 1):
