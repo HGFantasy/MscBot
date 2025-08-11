@@ -4,6 +4,10 @@ MscBot supports a lightweight agent system. Each `*.py` file inside the
 `agents/` directory is inspected on start. Any class deriving from
 `BaseAgent` will be instantiated automatically.
 
+Built-in agents such as `update_check`, `cache_clear`, `command_file`, and
+`dynamic_config` provide reference implementations and useful runtime
+features.
+
 ## Creating an agent
 
 1. Create a new module in `agents/` (e.g. `my_agent.py`).

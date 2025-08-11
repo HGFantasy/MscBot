@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- No unreleased changes.
+
+## 2025-08-11 — v2.0
+
+- Switched to an agent-based architecture with a central event bus for runtime coordination.
+- Dynamic configuration and command-file agents allow hot reloads and runtime controls.
+- HumanAgent provides fatigue-aware pacing; missions can be deferred and agents toggled on the fly.
+- Added GitHub update notifications, metrics summaries, and ambulance-only dispatch mode.
+- Optimized configuration lookups and dispatch classification, and removed obsolete legacy scripts.
 - Load environment variables from a `.env` file at startup.
 - Launch authenticated browsers concurrently for faster startup.
 - Simplified configuration validation for clarity.
@@ -10,14 +19,6 @@
 - Auto-update now pulls new files and restarts the bot when updates are detected.
 - Added cache clearing agent to periodically purge cached configuration values.
 - Cache clearing agent now wipes mission and transport cache files.
-
-## 2025-08-10 — v2.0
-
-- Switched to an agent-based architecture with a central event bus for runtime coordination.
-- Dynamic configuration and command-file agents allow hot reloads and runtime controls.
-- HumanAgent provides fatigue-aware pacing; missions can be deferred and agents toggled on the fly.
-- Added GitHub update notifications, metrics summaries, and ambulance-only dispatch mode.
-- Optimized configuration lookups and dispatch classification, and removed obsolete legacy scripts.
 
 ## 2025-08-09 — v1.0 public release
 
