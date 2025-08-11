@@ -18,12 +18,13 @@ async def close_browsers(browsers: Iterable) -> None:
     close.
     """
 
-    tasks = []
-    for i, browser in enumerate(browsers, 1):
-        display_info(f"Closing browser {i}")
-        tasks.append(browser.close())
+    async def _close(i: int, browser) -> None:
+        try:
+            await browser.close()
+        except Exception as e:  # pragma: no cover - best effort shutdown
+            display_error(f"Browser {i} close failed: {e}")
 
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    for i, result in enumerate(results, 1):
-        if isinstance(result, Exception):
-            display_error(f"Browser {i} close failed: {result}")
+    async with asyncio.TaskGroup() as tg:
+        for i, browser in enumerate(browsers, 1):
+            display_info(f"Closing browser {i}")
+            tg.create_task(_close(i, browser))

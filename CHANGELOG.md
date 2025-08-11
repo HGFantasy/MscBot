@@ -1,12 +1,9 @@
 # Changelog
 
-## Unreleased
+## 2025-08-11 — v2.0
 
 - Require Python 3.13+ and update docs accordingly.
 - Use `asyncio.TaskGroup` for concurrent mission and transport loops.
-
-## 2025-08-11 — v2.0
-
 - Switched to an agent-based architecture with a central event bus for runtime coordination.
 - Dynamic configuration and command-file agents allow hot reloads and runtime controls.
 - HumanAgent provides fatigue-aware pacing; missions can be deferred and agents toggled on the fly.
