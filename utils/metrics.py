@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from utils.pretty_print import display_info, display_error
 
@@ -16,7 +16,7 @@ WRITE_INTERVAL_SEC = 60  # ~once a minute
 HEARTBEAT_INTERVAL_SEC = 90  # console health ping
 
 # In-memory counters
-_COUNTERS: Dict[str, int] = {
+_COUNTERS: dict[str, int] = {
     "missions_seen": 0,
     "missions_deferred": 0,
     "missions_dispatched": 0,
@@ -40,7 +40,7 @@ def inc(name: str, n: int = 1) -> None:
     _COUNTERS["updated"] = int(time.time())
 
 
-def snapshot() -> Dict[str, Any]:
+def snapshot() -> dict[str, Any]:
     s = dict(_COUNTERS)
     s["updated"] = int(time.time())
     return s

@@ -15,7 +15,8 @@ import asyncio
 import random
 import time
 from contextlib import asynccontextmanager
-from typing import Any, Awaitable, Callable
+from typing import Any
+from collections.abc import Awaitable, Callable
 
 from data.config_settings import get_page_min_dwell_range
 from utils.auth_repair import ensure_authenticated
