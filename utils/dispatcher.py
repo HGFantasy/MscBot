@@ -102,28 +102,12 @@ def _cleanup_ttl(d: Dict[str, int], ttl: int) -> Dict[str, int]:
 
 
 def _priority_score(name: str) -> int:
-    """Option #3: score by mission value/size using keywords in the title."""
+    """Score a mission title using the Go service."""
     try:
         return get_priority_score(name)
-    except Exception:
-        n = (name or "").lower()
-        score = 0
-        # example cues (tweak freely)
-        for kw, pts in [
-            ("major", 8),
-            ("mass", 8),
-            ("large", 6),
-            ("multiple", 5),
-            ("high-rise", 5),
-            ("industrial", 4),
-            ("chemical", 4),
-            ("airport", 4),
-            ("brush", 3),
-            ("wildfire", 5),
-        ]:
-            if kw in n:
-                score += pts
-        return score
+    except Exception as exc:
+        display_error(f"priority score failed: {exc}")
+        return 0
 
 
 def _classify_type(text: str) -> str | None:

@@ -45,4 +45,5 @@ print(get_priority_score("Major wildfire"))
 ```
 
 This demonstrates delegating performance-critical work to a faster language
-via a simple HTTP API.
+via a simple HTTP API. The dispatcher now relies on this Go service for
+mission priority scoring, so keep it running during normal operation.
