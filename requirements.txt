@@ -1,3 +1,5 @@
 playwright~=1.48.0
 art~=6.5
 python-dotenv>=1.0
+
+requests>=2.31.0
