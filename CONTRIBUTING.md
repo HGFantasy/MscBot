@@ -3,7 +3,7 @@
 Thanks for helping improve MscBot!
 
 ## Getting started
-1. Install Python 3.13+
+1. Install Python 3.14+
 2. Create a virtual environment:
    ```bash
    python -m venv .venv

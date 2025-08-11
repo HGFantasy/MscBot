@@ -142,8 +142,12 @@ async def main():
             set_max_concurrency(2)
 
         display_info(f"Launching {threads} authenticated browsers…")
-        launchers = [launch_with_state(headless, p, state_path) for _ in range(threads)]
-        browsers = await asyncio.gather(*launchers)
+        async with asyncio.TaskGroup() as tg:
+            launchers = [
+                tg.create_task(launch_with_state(headless, p, state_path))
+                for _ in range(threads)
+            ]
+        browsers = [task.result() for task in launchers]
         if len(browsers) < 2:
             display_error("Unexpected: <2 browsers after launch_with_state.")
             for b in browsers:
@@ -155,10 +159,10 @@ async def main():
 
         browser_for_transport, browsers_for_missions = browsers[0], browsers[1:]
         display_info("Launching mission/transport tasks…")
-        mission_task = asyncio.create_task(mission_logic(browsers_for_missions))
-        transport_task = asyncio.create_task(transport_logic(browser_for_transport))
         try:
-            await asyncio.gather(mission_task, transport_task)
+            async with asyncio.TaskGroup() as tg:
+                tg.create_task(mission_logic(browsers_for_missions))
+                tg.create_task(transport_logic(browser_for_transport))
         finally:
             display_info("Shutting down browsers…")
             await close_browsers(browsers)

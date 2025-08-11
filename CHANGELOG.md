@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- No unreleased changes.
+- Require Python 3.14+ and update docs accordingly.
+- Use `asyncio.TaskGroup` for concurrent mission and transport loops.
 
 ## 2025-08-11 — v2.0
 
