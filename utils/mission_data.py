@@ -28,10 +28,6 @@ def _read_existing() -> Dict[str, Any]:
     return {}
 
 
-def read_snapshot() -> Dict[str, Any]:
-    return _read_existing()
-
-
 def _merge_preserving_seen_ts(snapshot: Dict[str, Any]) -> Dict[str, Any]:
     """
     Merge incoming snapshot with existing file, keeping the earliest seen_ts per mission.

@@ -34,29 +34,9 @@ _LAST_WRITE_TS = 0
 _LAST_HEARTBEAT_TS = 0
 
 
-def _load_existing() -> Dict[str, Any]:
-    try:
-        if METRICS_PATH.exists():
-            with METRICS_PATH.open("r", encoding="utf-8") as f:
-                d = json.load(f) or {}
-                for k, v in d.items():
-                    if isinstance(v, int) and k not in _COUNTERS:
-                        _COUNTERS[k] = v
-                return d
-    except Exception:
-        pass
-    return {}
-
-
 def inc(name: str, n: int = 1) -> None:
     global _COUNTERS
     _COUNTERS[name] = int(_COUNTERS.get(name, 0)) + int(n)
-    _COUNTERS["updated"] = int(time.time())
-
-
-def set_value(name: str, value: int) -> None:
-    global _COUNTERS
-    _COUNTERS[name] = int(value)
     _COUNTERS["updated"] = int(time.time())
 
 

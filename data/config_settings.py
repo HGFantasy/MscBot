@@ -224,27 +224,6 @@ def get_priority_keywords():
     return [x.strip().lower() for x in raw.split(",") if x.strip()]
 
 
-def _dow_key(i):
-    return ["mon", "tue", "wed", "thu", "fri", "sat", "sun"][i]
-
-
-@_cache
-def get_windows_by_day():
-    return {_dow_key(i): _get("scheduling", _dow_key(i), "") for i in range(7)}
-
-
-@_cache
-def get_blackout_dates():
-    raw = _get("scheduling", "blackout_dates", "")
-    return {d.strip() for d in raw.split(",") if d.strip()}
-
-
-# Backward-compat single active_windows for all days
-@_cache
-def get_global_active_windows():
-    return _get("scheduling", "active_windows", "")
-
-
 @_cache
 def get_transport_prefs():
     return {
