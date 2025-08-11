@@ -48,8 +48,10 @@ def snapshot() -> dict[str, Any]:
 
 def _write_now() -> None:
     METRICS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with METRICS_PATH.open("w", encoding="utf-8") as f:
-        json.dump(snapshot(), f, ensure_ascii=False, indent=2)
+    METRICS_PATH.write_text(
+        json.dumps(snapshot(), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
 
 def maybe_write(force: bool = False) -> None:

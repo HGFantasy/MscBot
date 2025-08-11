@@ -52,9 +52,8 @@ class DeferAgent(BaseAgent):
     def _load(self) -> dict[str, DeferredMission]:
         try:
             if self.path.exists():
-                with self.path.open("r", encoding="utf-8") as f:
-                    raw = json.load(f) or {}
-                    return {k: DeferredMission.from_dict(v) for k, v in raw.items()}
+                raw = json.loads(self.path.read_text(encoding="utf-8")) or {}
+                return {k: DeferredMission.from_dict(v) for k, v in raw.items()}
         except Exception:
             pass
         return {}
@@ -63,8 +62,7 @@ class DeferAgent(BaseAgent):
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             data = {k: asdict(v) for k, v in self.defer.items()}
-            with self.path.open("w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
+            self.path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         except Exception:
             pass
 
@@ -109,10 +107,11 @@ class DeferAgent(BaseAgent):
         self.dmax = int(cfg.get("max_minutes", 10))
 
     async def on_event(self, event: str, **kwargs: object) -> None:
-        if event == "config_reloaded":
-            self.on_config_reload()
-        elif event == "defer_mission":
-            mid = kwargs.get("mission_id")
-            reason = kwargs.get("reason", "")
-            if mid:
-                self.defer_mission(str(mid), str(reason))
+        match event:
+            case "config_reloaded":
+                self.on_config_reload()
+            case "defer_mission":
+                mid = kwargs.get("mission_id")
+                reason = kwargs.get("reason", "")
+                if mid:
+                    self.defer_mission(str(mid), str(reason))
