@@ -2,8 +2,12 @@
 # Maintained by: HGFantasy
 # License: MIT
 
+import sys
 import asyncio
 from pathlib import Path
+
+if sys.version_info < (3, 13):
+    raise RuntimeError("Python 3.13+ is required to run MscBot.")
 
 from dotenv import load_dotenv
 from playwright.async_api import async_playwright
