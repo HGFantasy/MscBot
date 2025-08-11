@@ -1,4 +1,4 @@
-# MscBot v2.0.1
+# MscBot v2.0
 Maintainer: **HGFantasy** — License: **MIT**
 
 ## Highlights
