@@ -5,7 +5,7 @@ Maintainer: **HGFantasy** — License: **MIT**
 - Agent-based architecture with an inter-agent event bus for runtime coordination.
 - Command-file and dynamic-config agents enable hot reloads and runtime controls.
 - HumanAgent delivers adaptive human-like pacing; missions can be deferred and agents toggled on the fly.
-- GitHub update alerts, metrics summaries, and ambulance-only dispatch mode.
+- Smarter auto-update with configurable branch/interval, metrics summaries, and ambulance-only dispatch mode.
 - Cached config getters and precompiled mission-type checks for smoother performance.
 - Environment variables can be loaded from a `.env` file.
 - Browsers launch concurrently for faster startup.

@@ -6,8 +6,7 @@
 - Launch authenticated browsers concurrently for faster startup.
 - Simplified configuration validation for clarity.
 - Updated documentation and licensing.
-- Reworked update check to track main repository commits and auto-update on startup.
-- Auto-update now pulls new files and restarts the bot when updates are detected.
+- Auto-update promoted to a main agent with configurable branch, interval, and safer pulls.
 
 ## 2025-08-10 — v2.0
 

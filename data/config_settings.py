@@ -276,13 +276,21 @@ def get_backoff_config():
 
 
 @_cache
-def get_update_repo():
+def get_update_settings():
     repo = _get("update", "repo", "HGFantasy/MscBot").strip()
     if repo.startswith("https://github.com/"):
         repo = repo[len("https://github.com/") :]
     if repo.endswith(".git"):
         repo = repo[:-4]
-    return repo
+    branch = _get("update", "branch", "main").strip()
+    interval = _getint("update", "interval_minutes", 60)
+    auto = _getbool("update", "auto", True)
+    return {"repo": repo, "branch": branch, "interval": interval, "auto": auto}
+
+
+@_cache
+def get_update_repo():
+    return get_update_settings()["repo"]
 
 
 @_cache

@@ -30,7 +30,7 @@ from utils.runtime_flags import wait_if_paused, should_stop
 from utils.metrics import maybe_write
 from utils.browser import close_browsers
 from agents import load_agents, emit
-from agents.update_check import UpdateCheckAgent
+from agents.auto_update import AutoUpdateAgent
 
 
 def _validate_or_die() -> None:
@@ -168,7 +168,7 @@ async def main():
 async def bootstrap() -> None:
     """Run the update check before loading the bot."""
 
-    await UpdateCheckAgent()._check_now(auto_update=True)
+    await AutoUpdateAgent().check_now()
     load_dotenv()
     load_agents()
     await main()
