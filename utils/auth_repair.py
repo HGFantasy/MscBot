@@ -1,9 +1,11 @@
 # Project: MscBot — Auto re-auth (cycle-free)
 # License: MIT
 
-import os, time
+import os
+import time
 from utils.pretty_print import display_info, display_error
 from data.config_settings import get_username, get_password
+
 
 async def _trace_once(context, name: str):
     try:
@@ -13,10 +15,13 @@ async def _trace_once(context, name: str):
     except Exception:
         pass
 
+
 async def _maybe_accept_cookies(page):
     for sel in [
-        'button:has-text("Accept")','button:has-text("I agree")',
-        '[id*="cookie"] button:has-text("Accept")','button[aria-label*="accept"]',
+        'button:has-text("Accept")',
+        'button:has-text("I agree")',
+        '[id*="cookie"] button:has-text("Accept")',
+        'button[aria-label*="accept"]',
     ]:
         try:
             btn = await page.wait_for_selector(sel, timeout=1200)
@@ -27,9 +32,12 @@ async def _maybe_accept_cookies(page):
         except Exception:
             pass
 
+
 async def _perform_inline_login(page, username, password):
     # No imports from setup.login or utils.politeness to avoid circular deps.
-    await page.goto("https://www.missionchief.com/users/sign_in", wait_until="domcontentloaded")
+    await page.goto(
+        "https://www.missionchief.com/users/sign_in", wait_until="domcontentloaded"
+    )
     try:
         await page.wait_for_selector("form#new_user", timeout=12000)
     except Exception:
@@ -38,7 +46,9 @@ async def _perform_inline_login(page, username, password):
     try:
         await page.fill('input[name="user[email]"]', username)
         await page.fill('input[name="user[password]"]', password)
-        submit = page.locator('input[type="submit"], button[type="submit"], input[name="commit"]').first
+        submit = page.locator(
+            'input[type="submit"], button[type="submit"], input[name="commit"]'
+        ).first
         if await submit.count() > 0:
             await submit.click()
         else:
@@ -50,6 +60,7 @@ async def _perform_inline_login(page, username, password):
     except Exception:
         pass
     return "users/sign_in" not in (page.url or "")
+
 
 async def ensure_authenticated(page) -> bool:
     """If on sign_in, try to re-login inline and refresh storage_state. Returns True if fixed."""
