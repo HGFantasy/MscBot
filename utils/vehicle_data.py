@@ -1,8 +1,8 @@
-
 # Project: MscBot
 # License: MIT
 
-import json, os
+import json
+import os
 from typing import Any
 
 from utils.pretty_print import display_info, display_error

@@ -4,14 +4,19 @@
 # License: MIT
 
 from __future__ import annotations
-import json, re, time
+
+import json
+import re
+import time
 from pathlib import Path
-from typing import Dict, Any
-from utils.pretty_print import display_info, display_error
-from utils.politeness import goto_safe, ensure_settled
+from typing import Any, Dict
+
+from utils.pretty_print import display_error, display_info
+from utils.politeness import ensure_settled, goto_safe
 
 SNAPSHOT_PATH = Path("data/mission_data.json")
 MISSION_HREF_RE = re.compile(r"/missions/(\d+)")
+
 
 def _read_existing() -> Dict[str, Any]:
     try:
@@ -22,8 +27,10 @@ def _read_existing() -> Dict[str, Any]:
         pass
     return {}
 
+
 def read_snapshot() -> Dict[str, Any]:
     return _read_existing()
+
 
 def _merge_preserving_seen_ts(snapshot: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -55,6 +62,7 @@ def _merge_preserving_seen_ts(snapshot: Dict[str, Any]) -> Dict[str, Any]:
 
     return snapshot
 
+
 def write_snapshot(snapshot: Dict[str, Any]) -> None:
     """
     Write mission snapshot to disk, preserving earliest seen_ts across rewrites.
@@ -65,7 +73,9 @@ def write_snapshot(snapshot: Dict[str, Any]) -> None:
     # Skip write if unchanged
     prev = _read_existing()
     try:
-        unchanged = json.dumps(prev, sort_keys=True) == json.dumps(snapshot, sort_keys=True)
+        unchanged = json.dumps(prev, sort_keys=True) == json.dumps(
+            snapshot, sort_keys=True
+        )
     except Exception:
         unchanged = False
 
@@ -77,6 +87,7 @@ def write_snapshot(snapshot: Dict[str, Any]) -> None:
     with SNAPSHOT_PATH.open("w", encoding="utf-8") as f:
         json.dump(snapshot, f, ensure_ascii=False, indent=2)
     display_info(f"Wrote mission_data.json with {len(snapshot)} missions.")
+
 
 async def _collect_from_page(page) -> Dict[str, Any]:
     """
@@ -115,6 +126,7 @@ async def _collect_from_page(page) -> Dict[str, Any]:
 
     return snapshot
 
+
 async def check_and_grab_missions(*args, **kwargs) -> None:
     """
     Entry point used by Main.py.
@@ -141,7 +153,9 @@ async def check_and_grab_missions(*args, **kwargs) -> None:
     if page is not None:
         collected = await _collect_from_page(page)
         if not collected:
-            display_info("mission snapshot: no missions found on page; preserving existing snapshot.")
+            display_info(
+                "mission snapshot: no missions found on page; preserving existing snapshot."
+            )
             collected = _read_existing()
         try:
             write_snapshot(collected)
