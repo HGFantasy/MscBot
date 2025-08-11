@@ -4,6 +4,7 @@ Maintainer: **HGFantasy** — License: **MIT**
 ## Highlights
 - Agent-based architecture with an inter-agent event bus for runtime coordination.
 - Command-file and dynamic-config agents enable hot reloads and runtime controls.
+- Cache clearing agent purges cached configuration values periodically.
 - HumanAgent delivers adaptive human-like pacing; missions can be deferred and agents toggled on the fly.
 - GitHub update alerts, metrics summaries, and ambulance-only dispatch mode.
 - Cached config getters and precompiled mission-type checks for smoother performance.

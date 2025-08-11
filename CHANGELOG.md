@@ -8,6 +8,7 @@
 - Updated documentation and licensing.
 - Reworked update check to track main repository commits and auto-update on startup.
 - Auto-update now pulls new files and restarts the bot when updates are detected.
+- Added cache clearing agent to periodically purge cached configuration values.
 
 ## 2025-08-10 — v2.0
 
