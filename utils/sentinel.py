@@ -3,18 +3,21 @@
 # License: MIT
 
 from __future__ import annotations
-import time, re
+
+import re
+import time
 from collections import deque
-from typing import Deque, Tuple
+
 from utils.metrics import inc
 
 # Keep the last ~2 minutes of error timestamps
-_RATE_LIMITS: Deque[int] = deque(maxlen=64)
-_TIMEOUTS: Deque[int] = deque(maxlen=64)
+_RATE_LIMITS: deque[int] = deque(maxlen=64)
+_TIMEOUTS: deque[int] = deque(maxlen=64)
 
 # Simple classifiers (tweakable without breaking callers)
 _RE_RATE = re.compile(r"\b(429|too\s+many\s+requests|rate[-\s]?limit)\b", re.I)
-_RE_TO   = re.compile(r"\b(timeout|timed\s*out|net::ERR_|ETIMEDOUT|TimeoutError)\b", re.I)
+_RE_TO = re.compile(r"\b(timeout|timed\s*out|net::ERR_|ETIMEDOUT|TimeoutError)\b", re.I)
+
 
 def observe_error(msg: str) -> None:
     """Record error categories and raise metrics counters."""
@@ -30,9 +33,11 @@ def observe_error(msg: str) -> None:
     else:
         inc("errors", 1)
 
-def _count_recent(q: Deque[int], window_sec: int = 60) -> int:
+
+def _count_recent(q: deque[int], window_sec: int = 60) -> int:
     now = int(time.time())
     return sum(1 for t in q if now - t <= window_sec)
+
 
 def recommend_extra_delay() -> float:
     """

@@ -43,6 +43,14 @@ from agents import emit
 await emit("config_reload")  # ask dynamic config agent to reload
 ```
 
+`emit` can also gather responses from handlers by setting `collect=True`:
+
+```python
+responses = await emit("ping", collect=True)
+for agent, reply in responses.items():
+    print(agent, reply)
+```
+
 Handle events by overriding `on_event`:
 
 ```python
@@ -59,7 +67,7 @@ them via the `[agents]` section in `config.ini`:
 
 ```ini
 [agents]
-enabled = update_check,command_file
+enabled = auto_update,command_file
 disabled = logger
 ```
 
@@ -76,7 +84,7 @@ is running. Write commands to the configured command file, for example:
 
 ```
 agent-disable metrics_summary
-agent-enable update_check
+agent-enable auto_update
 ```
 
 Each line is processed and the file is deleted after reading.

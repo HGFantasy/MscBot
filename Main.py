@@ -6,31 +6,31 @@ import asyncio
 from pathlib import Path
 
 from dotenv import load_dotenv
-from playwright.async_api import async_playwright
 
-from setup.login import login_and_save_state, launch_with_state
+from agents import emit, load_agents
+from agents.auto_update import AutoUpdateAgent
 from data.config_settings import (
-    get_username,
-    get_password,
-    get_threads,
+    get_eta_filter,
     get_headless,
     get_mission_delay,
+    get_password,
+    get_politeness,
+    get_threads,
     get_transport_delay,
-    get_eta_filter,
     get_transport_prefs,
+    get_username,
 )
+from setup.login import launch_with_state, login_and_save_state
+from utils.browser import close_browsers
+from utils.building_data import gather_building_data
 from utils.dispatcher import navigate_and_dispatch
+from utils.metrics import maybe_write
 from utils.mission_data import check_and_grab_missions
-from utils.pretty_print import display_info, display_error
+from utils.politeness import set_max_concurrency
+from utils.pretty_print import display_error, display_info
+from utils.runtime_flags import should_stop, wait_if_paused
 from utils.transport import handle_transport_requests
 from utils.vehicle_data import gather_vehicle_data
-from utils.building_data import gather_building_data
-from utils.politeness import set_max_concurrency
-from utils.runtime_flags import wait_if_paused, should_stop
-from utils.metrics import maybe_write
-from utils.browser import close_browsers
-from agents import load_agents, emit
-from agents.update_check import UpdateCheckAgent
 
 
 def _validate_or_die() -> None:
@@ -89,9 +89,7 @@ async def mission_logic(browsers_for_missions):
             vehicle_data = Path("data/vehicle_data.json")
             building_data = Path("data/building_data.json")
             if vehicle_data.exists() and building_data.exists():
-                await check_and_grab_missions(
-                    browsers_for_missions, len(browsers_for_missions)
-                )
+                await check_and_grab_missions(browsers_for_missions, len(browsers_for_missions))
             else:
                 try:
                     if not vehicle_data.exists():
@@ -117,9 +115,7 @@ async def main():
 
     username, password = get_username(), get_password()
     headless, threads = get_headless(), max(2, int(get_threads()))
-    display_info(
-        f"Config → threads={threads}, headless={headless}, has_user={bool(username)}"
-    )
+    display_info(f"Config → threads={threads}, headless={headless}, has_user={bool(username)}")
     if not username or not password:
         display_error("Missing credentials. Set them in config.ini or via env vars.")
         return
@@ -127,52 +123,55 @@ async def main():
     state_path = Path("auth") / "storage.json"
     state_path.parent.mkdir(parents=True, exist_ok=True)
 
-    async with async_playwright() as p:
-        if not state_path.exists():
-            ok = await login_and_save_state(
-                username, password, headless, p, state_path=state_path
-            )
-            if not ok:
-                display_error("Login-once failed; cannot continue.")
-                return
-
-        try:
-            set_max_concurrency(threads)
-        except Exception:
-            set_max_concurrency(2)
-
-        display_info(f"Launching {threads} authenticated browsers…")
-        launchers = [launch_with_state(headless, p, state_path) for _ in range(threads)]
-        browsers = await asyncio.gather(*launchers)
-        if len(browsers) < 2:
-            display_error("Unexpected: <2 browsers after launch_with_state.")
-            for b in browsers:
-                try:
-                    await b.close()
-                except Exception:
-                    pass
+    if not state_path.exists():
+        ok = await login_and_save_state(username, password, headless, state_path=state_path)
+        if not ok:
+            display_error("Login-once failed; cannot continue.")
             return
 
-        browser_for_transport, browsers_for_missions = browsers[0], browsers[1:]
-        display_info("Launching mission/transport tasks…")
-        mission_task = asyncio.create_task(mission_logic(browsers_for_missions))
-        transport_task = asyncio.create_task(transport_logic(browser_for_transport))
-        try:
-            await asyncio.gather(mission_task, transport_task)
-        finally:
-            display_info("Shutting down browsers…")
-            await close_browsers(browsers)
-            await emit("shutdown")
+    try:
+        polite = get_politeness()
+        set_max_concurrency(int(polite.get("max_concurrency", threads)))
+    except Exception:
+        set_max_concurrency(max(1, int(threads)))
+
+    display_info(f"Launching {threads} authenticated sessions…")
+    launchers = [launch_with_state(headless, state_path=state_path) for _ in range(threads)]
+    browsers = await asyncio.gather(*launchers)
+    if len(browsers) < 2:
+        display_error("Unexpected: <2 sessions after launch_with_state.")
+        for b in browsers:
+            try:
+                await asyncio.to_thread(getattr(b, "close", lambda: None))
+            except Exception:
+                pass
+        return
+
+    browser_for_transport, browsers_for_missions = browsers[0], browsers[1:]
+    display_info("Launching mission/transport tasks…")
+    mission_task = asyncio.create_task(mission_logic(browsers_for_missions))
+    transport_task = asyncio.create_task(transport_logic(browser_for_transport))
+    try:
+        await asyncio.gather(mission_task, transport_task)
+    finally:
+        display_info("Shutting down sessions…")
+        await close_browsers(browsers)
+        await emit("shutdown")
 
 
 async def bootstrap() -> None:
     """Run the update check before loading the bot."""
 
-    await UpdateCheckAgent()._check_now(auto_update=True)
+    await AutoUpdateAgent().check_now()
     load_dotenv()
     load_agents()
     await main()
 
 
 if __name__ == "__main__":
-    asyncio.run(bootstrap())
+    try:
+        asyncio.run(bootstrap())
+    except KeyboardInterrupt:
+        display_info("Interrupted by user. Exiting…")
+    except Exception as exc:
+        display_error(f"Fatal error: {exc}")

@@ -1,12 +1,12 @@
 # Project: MscBot
 # License: MIT
 
+import asyncio
 import json
 import os
 from typing import Any
 
-from utils.pretty_print import display_info, display_error
-from utils.politeness import goto_safe, ensure_settled
+from utils.pretty_print import display_error, display_info
 
 
 async def gather_building_data(browsers, count) -> None:
@@ -18,18 +18,9 @@ async def gather_building_data(browsers, count) -> None:
     """
 
     try:
-        page = browsers[0].contexts[0].pages[0]
-        await goto_safe(page, "https://www.missionchief.com")
-        await ensure_settled(page)
-
-        # Fetch the building list using the in-page fetch API to preserve cookies
-        data: list[dict[str, Any]] = await page.evaluate(
-            """async () => {
-                const r = await fetch('/api/buildings');
-                if (!r.ok) { return []; }
-                return await r.json();
-            }"""
-        )
+        session = browsers[0]
+        resp = await asyncio.to_thread(session.get, "https://www.missionchief.com/api/buildings")
+        data: list[dict[str, Any]] = resp.json() if resp.ok else []
 
         mapped = {
             str(b.get("id")): {

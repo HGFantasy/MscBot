@@ -1,0 +1,35 @@
+[tool.black]
+line-length = 100
+target-version = ["py313"]
+# Keep tools and vendor dirs out of formatting scope
+extend-exclude = "(Lib|Scripts|\\.venv|\\.ruff_cache|build|dist)"
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+src = ["."]
+extend-exclude = [
+    "Lib",
+    "Scripts",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort (import sorting)
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+]
+ignore = [
+    "E501",  # line length handled by black
+]
+
+[tool.ruff.format]
+quote-style = "preserve"
+indent-style = "space"
+skip-magic-trailing-comma = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

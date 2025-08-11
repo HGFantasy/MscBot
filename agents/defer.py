@@ -7,7 +7,6 @@ import random
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Dict
 
 from data.config_settings import get_defer_config
 from utils.pretty_print import display_info
@@ -25,7 +24,7 @@ class DeferredMission:
     defer_count: int = 0
 
     @classmethod
-    def from_dict(cls, data: Dict[str, object]) -> "DeferredMission":
+    def from_dict(cls, data: dict[str, object]) -> DeferredMission:
         """Create a record from a raw dict."""
         return cls(
             next_check=int(data.get("next_check", 0)),
@@ -40,7 +39,7 @@ class DeferAgent(BaseAgent):
 
     def __init__(self, path: Path | None = None) -> None:
         self.path = path or Path("data/deferred_missions.json")
-        self.defer: Dict[str, DeferredMission] = self._load()
+        self.defer: dict[str, DeferredMission] = self._load()
         cfg = get_defer_config()
         self.enable = bool(cfg.get("enable", True))
         self.dmin = int(cfg.get("min_minutes", 5))
@@ -50,7 +49,7 @@ class DeferAgent(BaseAgent):
         """Return whether the agent is active."""
         return self.enable
 
-    def _load(self) -> Dict[str, DeferredMission]:
+    def _load(self) -> dict[str, DeferredMission]:
         try:
             if self.path.exists():
                 with self.path.open("r", encoding="utf-8") as f:
@@ -71,7 +70,7 @@ class DeferAgent(BaseAgent):
 
     def get(self, mid: str) -> DeferredMission:
         """Retrieve the deferral record for ``mid`` if present."""
-        return self.defer.get(mid, DeferredMission())
+        return self.defer.get(mid) or DeferredMission()
 
     def should_skip(self, mid: str, now: int) -> bool:
         """Return ``True`` if mission ``mid`` should be skipped at ``now``."""

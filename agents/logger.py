@@ -1,4 +1,5 @@
 """Example agent that logs lifecycle events."""
+
 from __future__ import annotations
 
 from utils.pretty_print import display_info
@@ -12,4 +13,3 @@ class LoggerAgent(BaseAgent):
 
     async def on_shutdown(self, **_: dict) -> None:
         display_info("LoggerAgent: bot shutting down")
-
