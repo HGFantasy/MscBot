@@ -1,8 +1,9 @@
 # Project: MscBot
 # License: MIT
 
+import asyncio
 import json
-import os
+from pathlib import Path
 from typing import Any
 
 from utils.pretty_print import display_info, display_error
@@ -24,13 +25,14 @@ async def gather_vehicle_data(browsers, count) -> None:
         await ensure_settled(page)
 
         # Fetch the vehicle list using the in-page fetch API to preserve cookies
-        data: list[dict[str, Any]] = await page.evaluate(
-            """async () => {
-                const r = await fetch('/api/vehicles');
-                if (!r.ok) { return []; }
-                return await r.json();
-            }"""
-        )
+        async with asyncio.timeout(10):
+            data: list[dict[str, Any]] = await page.evaluate(
+                """async () => {
+                    const r = await fetch('/api/vehicles');
+                    if (!r.ok) { return []; }
+                    return await r.json();
+                }"""
+            )
 
         mapped = {
             str(v.get("id")): {
@@ -41,10 +43,10 @@ async def gather_vehicle_data(browsers, count) -> None:
             if isinstance(v, dict)
         }
 
-        os.makedirs("data", exist_ok=True)
-        with open("data/vehicle_data.json", "w", encoding="utf-8") as f:
-            json.dump(mapped, f, indent=2)
-        display_info(f"Fetched {len(mapped)} vehicles → data/vehicle_data.json")
+        data_path = Path("data") / "vehicle_data.json"
+        data_path.parent.mkdir(parents=True, exist_ok=True)
+        data_path.write_text(json.dumps(mapped, indent=2), encoding="utf-8")
+        display_info(f"Fetched {len(mapped)} vehicles → {data_path}")
 
     except Exception as e:  # pragma: no cover - network/DOM failures
         display_error(f"gather_vehicle_data failed: {e}")

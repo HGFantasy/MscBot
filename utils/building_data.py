@@ -1,8 +1,9 @@
 # Project: MscBot
 # License: MIT
 
+import asyncio
 import json
-import os
+from pathlib import Path
 from typing import Any
 
 from utils.pretty_print import display_info, display_error
@@ -23,13 +24,14 @@ async def gather_building_data(browsers, count) -> None:
         await ensure_settled(page)
 
         # Fetch the building list using the in-page fetch API to preserve cookies
-        data: list[dict[str, Any]] = await page.evaluate(
-            """async () => {
-                const r = await fetch('/api/buildings');
-                if (!r.ok) { return []; }
-                return await r.json();
-            }"""
-        )
+        async with asyncio.timeout(10):
+            data: list[dict[str, Any]] = await page.evaluate(
+                """async () => {
+                    const r = await fetch('/api/buildings');
+                    if (!r.ok) { return []; }
+                    return await r.json();
+                }"""
+            )
 
         mapped = {
             str(b.get("id")): {
@@ -40,10 +42,10 @@ async def gather_building_data(browsers, count) -> None:
             if isinstance(b, dict)
         }
 
-        os.makedirs("data", exist_ok=True)
-        with open("data/building_data.json", "w", encoding="utf-8") as f:
-            json.dump(mapped, f, indent=2)
-        display_info(f"Fetched {len(mapped)} buildings → data/building_data.json")
+        data_path = Path("data") / "building_data.json"
+        data_path.parent.mkdir(parents=True, exist_ok=True)
+        data_path.write_text(json.dumps(mapped, indent=2), encoding="utf-8")
+        display_info(f"Fetched {len(mapped)} buildings → {data_path}")
 
     except Exception as e:  # pragma: no cover - network/DOM failures
         display_error(f"gather_building_data failed: {e}")
