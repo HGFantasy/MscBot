@@ -1,0 +1,16 @@
+{
+  "missions_seen": 54,
+  "missions_deferred": 2,
+  "missions_dispatched": 27,
+  "transports_seen": 0,
+  "transports_deferred": 0,
+  "transports_completed": 0,
+  "errors": 0,
+  "rate_limit_hits": 0,
+  "timeouts": 0,
+  "reauths": 0,
+  "state_reload": 0,
+  "updated": 1754755406,
+  "type_softcap_skips": 27,
+  "missions_topped_up": 5
+}
