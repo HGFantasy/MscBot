@@ -23,7 +23,6 @@ from utils.metrics import inc, maybe_write
 from utils.politeness import ensure_settled, sleep_jitter
 from utils.pretty_print import display_error, display_info
 
-
 DEFER_PATH = Path("data/deferred_transports.json")
 BLACKLIST_PATH = Path("data/destination_blacklist.json")
 ATTEMPT_PATH = Path("data/transport_attempts.json")
@@ -59,7 +58,7 @@ class _Rec:
     first_seen: int
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any], now: int) -> "_Rec":
+    def from_dict(cls, d: dict[str, Any], now: int) -> _Rec:
         return cls(
             next_check=int(d.get("next_check", 0)),
             defer_count=int(d.get("defer_count", 0)),
