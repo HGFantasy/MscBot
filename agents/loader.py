@@ -80,7 +80,13 @@ async def emit(event: str, **kwargs: Any) -> None:
     handler which receives the event name via a keyword argument.
     """
 
-    tasks: list[tuple[str, str, Awaitable[Any]]] = []
+    async def _run(name: str, attr: str, aw: Awaitable[Any]) -> None:
+        try:
+            await aw
+        except Exception as e:  # pragma: no cover - defensive
+            display_error(f"Agent {name}.{attr} failed: {e}")
+
+    runners: list[Awaitable[None]] = []
     for name in list(_ACTIVE):
         agent = _AGENTS.get(name)
         if not agent:
@@ -90,21 +96,17 @@ async def emit(event: str, **kwargs: Any) -> None:
             if not handler:
                 continue
             try:
-                if pass_name:
-                    result = handler(event=event, **kwargs)
-                else:
-                    result = handler(**kwargs)
+                result = (
+                    handler(event=event, **kwargs) if pass_name else handler(**kwargs)
+                )
                 if inspect.isawaitable(result):
-                    tasks.append((name, attr, result))
+                    runners.append(_run(name, attr, result))
             except Exception as e:  # pragma: no cover - defensive
                 display_error(f"Agent {name}.{attr} failed: {e}")
-    if tasks:
-        results = await asyncio.gather(
-            *(t for _, _, t in tasks), return_exceptions=True
-        )
-        for (name, attr, _), res in zip(tasks, results):
-            if isinstance(res, Exception):
-                display_error(f"Agent {name}.{attr} failed: {res}")
+    if runners:
+        async with asyncio.TaskGroup() as tg:
+            for r in runners:
+                tg.create_task(r)
 
 
 def enable_agent(name: str) -> bool:

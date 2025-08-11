@@ -1,5 +1,6 @@
 # MscBot v2.0
 Maintainer: **HGFantasy** — License: **MIT**
+Requires Python 3.13+.
 
 ## Highlights
 - Agent-based architecture with an inter-agent event bus for runtime coordination.
@@ -12,6 +13,7 @@ Maintainer: **HGFantasy** — License: **MIT**
 - Environment variables can be loaded from a `.env` file.
 - Browsers launch concurrently for faster startup.
 - Simplified configuration validation for clarity.
+- Concurrent loops leverage `asyncio.TaskGroup` for robust error handling.
 
 ## Quickstart (Windows PowerShell)
 ```powershell

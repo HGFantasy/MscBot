@@ -1,5 +1,7 @@
 # Agent Development Guide
 
+Requires Python 3.13+.
+
 MscBot supports a lightweight agent system. Each `*.py` file inside the
 `agents/` directory is inspected on start. Any class deriving from
 `BaseAgent` will be instantiated automatically.
@@ -55,6 +57,9 @@ class MyAgent(BaseAgent):
         if event == "config_reloaded":
             print("config updated!")
 ```
+
+Events are delivered concurrently to agents using `asyncio.TaskGroup`, so a slow
+or failing handler will not block others.
 
 ## Enabling or disabling agents
 
