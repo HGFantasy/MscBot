@@ -70,7 +70,7 @@ class DeferAgent(BaseAgent):
 
     def get(self, mid: str) -> DeferredMission:
         """Retrieve the deferral record for ``mid`` if present."""
-        return self.defer.get(mid, DeferredMission())
+        return self.defer.get(mid) or DeferredMission()
 
     def should_skip(self, mid: str, now: int) -> bool:
         """Return ``True`` if mission ``mid`` should be skipped at ``now``."""
