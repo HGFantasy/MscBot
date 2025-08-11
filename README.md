@@ -16,7 +16,7 @@ Maintainer: **HGFantasy** — License: **MIT**
 ## Quickstart (Windows PowerShell)
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-py -3.11 -m venv .venv  # or 3.12/3.13/3.14
+py -3.13 -m venv .venv  # or 3.14
 .\.venv\Scripts\Activate.ps1
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe -m playwright install
